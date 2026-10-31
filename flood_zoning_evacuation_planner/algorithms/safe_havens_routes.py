@@ -344,7 +344,8 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
             if fac_feats:
                 best = min(((g.distance(geom), lab) for g, lab in fac_feats), default=None)
                 if best and best[0] <= 500:
-                    fac_txt = '%s (%d m)' % (best[1], int(round(best[0])))
+                    fac_txt = ('%s (inside the haven)' % best[1] if best[0] < 1
+                               else '%s (%d m)' % (best[1], int(round(best[0]))))
             geom.convertToMultiType()
             f = QgsFeature(hf)
             f.setGeometry(geom)

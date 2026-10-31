@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.2.0 (in development)
+## 1.0.0
+- Report tables tool: key figures and plain-language tables in Word (.docx) or HTML for the
+  planning zones, a comparison of two scenarios, evacuation zones, safe havens and routes.
+- Evacuation zones: optional barrier layer (e.g. the river channel) so that settlements on
+  opposite banks are never grouped.
+- Safe havens and routes: every separate settlement of a zone (more than 100 m apart) gets its own
+  route; safe havens keep at least 150 m from the river layer.
+- User guide with a worked example (fictional river valley), linked from each tool's Help button.
+- Scripts to create the example data and re-run the example with figures.
+
+## 0.2.0
 - Evacuation zones tool: settlements within a distance of the risk zones are evacuated as a
   whole and grouped by settlement type into coded zones (e.g. RC-01).
 - Safe havens and evacuation routes tool: one safe haven per zone, about the same area as the

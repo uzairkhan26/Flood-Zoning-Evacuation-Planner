@@ -3,30 +3,32 @@ name=Flood Zoning & Evacuation Planner
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 supportsQt6=True
-description=Turns flood-depth maps into planning zones (no / restricted / conditional development and river protection), and plans evacuation zones, safe havens and evacuation routes.
+description=Turns flood-depth maps into spatial planning zones (no / restricted / conditional development and river protection), plans evacuation zones, safe havens and evacuation routes, and writes report tables.
 about=Flood Zoning & Evacuation Planner adds Processing tools that turn flood-depth rasters from any hydraulic model into practical flood-risk management layers, for any area in the world.
 
-    Tools in this version:
+    Tools:
     - River corridor: river channel polygon and protection buffer, from river polygons, river lines, or the channel visible in a flood-depth raster.
     - Spatial planning zones: no-development (red), restricted (orange) and conditional (yellow) development zones and a river protection zone (green), based on flood probability and depth, with a rule for existing settlements and smoothing into a few continuous zones.
-    - Evacuation zones: whole settlements at risk, grouped by type (town, village, camp...).
+    - Evacuation zones: whole settlements at risk, grouped by type (town, village, camp...), optionally never across the river.
     - Safe havens and evacuation routes: dry, high ground of about the same size as each evacuation zone, close to roads and public facilities, and least-cost walking routes that use roads first, then paths, then open ground, avoiding deep water and crossing the river only on roads.
+    - Report tables: key figures and plain-language tables (Word or HTML) for the zones, a scenario comparison, evacuation zones, safe havens and routes.
 
     All thresholds are adjustable. Results are styled automatically. Works in any projected coordinate system; layers in geographic coordinates are processed in the local UTM zone.
 
-    No extra Python packages are needed: the tools use only what is shipped with QGIS (GDAL and NumPy).
-version=0.2.0
+    No extra Python packages are needed: the tools use only what is shipped with QGIS (GDAL and NumPy). A user guide with a worked example is on the homepage.
+version=1.0.0
 author=Muhammad Uzair Khan
 email=uzairkhan1478@gmail.com
-changelog=0.2.0 - Evacuation tools: evacuation zones, safe havens and evacuation routes.
+changelog=1.0.0 - First stable release: report tables tool, user guide and worked example, river barrier for evacuation zones, a route for every settlement of a zone, Help buttons linked to the guide.
+    0.2.0 - Evacuation tools: evacuation zones, safe havens and evacuation routes.
     0.1.0 - First development version: river corridor and spatial planning zones tools.
-tags=flood,flood risk,hazard,zoning,spatial planning,land use,evacuation,disaster risk reduction,emergency,hydraulics,processing
-homepage=https://github.com/uzairkhan26/Flood-Zoning-Evacuation-Planner
+tags=flood,flood zoning,floodplain,flood risk,hazard,zoning,spatial planning,land use,evacuation,disaster risk reduction,emergency,hydraulics,processing
+homepage=https://github.com/uzairkhan26/Flood-Zoning-Evacuation-Planner/blob/main/docs/user_guide.md
 tracker=https://github.com/uzairkhan26/Flood-Zoning-Evacuation-Planner/issues
 repository=https://github.com/uzairkhan26/Flood-Zoning-Evacuation-Planner
 category=Analysis
 icon=icons/icon.png
-experimental=True
+experimental=False
 deprecated=False
 hasProcessingProvider=yes
 server=False

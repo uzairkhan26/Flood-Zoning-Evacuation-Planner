@@ -9,7 +9,12 @@ import datetime
 import html
 import re
 import zipfile
-from xml.sax.saxutils import escape
+
+
+def escape(text):
+    """Escape text for XML element content."""
+    return html.escape(str(text), quote=False)
+
 
 DASH = '–'
 
@@ -230,7 +235,9 @@ def _summary(zones, compare, evac, havens, routes):
         txt = '%d safe havens were found' % len(havens)
         if evac:
             txt += ' (%d of %d evacuation zones)' % (len(zid & {z['zone_id'] for z in evac}), len(evac))
-        if ratios:
+        if ratios and num(min(ratios), 1) == num(max(ratios), 1) == '1.0':
+            txt += '; each is about the same size as its zone'
+        elif ratios:
             txt += '; each is %s to %s times the size of its zone' % (num(min(ratios), 1), num(max(ratios), 1))
         s.append(txt + '.')
         missing = [z['zone_id'] for z in evac if z['zone_id'] not in zid]
@@ -319,6 +326,8 @@ def _compare_table(caption, a, b):
 
 def _signed(v, dec=1):
     s = num(v, dec)
+    if s.lstrip('-').replace('0', '').replace('.', '') == '':    # -0 / -0.0 -> 0
+        return s.lstrip('-')
     return ('+' + s) if v is not None and v > 0 and s != DASH else s
 
 

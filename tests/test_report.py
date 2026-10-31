@@ -35,6 +35,7 @@ ROUTES = [dict(route_id='V-2-R1', zone_id='V-2', sector=1, settl_type='Village',
 
 def test_helpers():
     assert R.num(1234.56) == '1,234.6'
+    assert R._signed(-0.04) == '0.0' and R._signed(-0.4, 0) == '0' and R._signed(2.0) == '+2.0'
     assert R.num(None) == R.DASH and R.num(float('nan')) == R.DASH
     assert sorted(['RS-10', 'RS-2', 'BU-1'], key=R.natural_key) == ['BU-1', 'RS-2', 'RS-10']
 
