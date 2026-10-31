@@ -1,0 +1,117 @@
+# -*- coding: utf-8 -*-
+"""Tests for the NumPy routing core (cost distance, paths, filters, k-means, planner)."""
+import numpy as np
+import pytest
+
+from flood_zoning_evacuation_planner.core import costpath as cp
+from flood_zoning_evacuation_planner.core import evacuation as ev
+
+
+def _random_cost(seed):
+    rng = np.random.default_rng(seed)
+    nr, nc = rng.integers(25, 70, 2)
+    cost = rng.random((nr, nc)) * 4 + 0.5
+    cost[nr // 2, :nc - 4] = np.inf                       # wall with a gap
+    src = np.zeros((nr, nc), bool)
+    src[0, 0] = True
+    return cost, src
+
+
+@pytest.mark.parametrize('seed', [0, 1, 2])
+def test_cost_distance_matches_scikit_image(seed):
+    graph = pytest.importorskip('skimage.graph')
+    cost, src = _random_cost(seed)
+    d = cp.cost_distance(cost, src, res=5.0)
+    ref, _ = graph.MCP_Geometric(np.where(np.isfinite(cost), cost, -1) * 5.0).find_costs([(0, 0)])
+    assert (np.isfinite(d) == np.isfinite(ref)).all()
+    fin = np.isfinite(d)
+    assert np.allclose(d[fin], ref[fin], rtol=1e-9, atol=1e-6)
+
+
+def test_cost_distance_uniform_is_8_connected_distance():
+    cost = np.ones((11, 11))
+    src = np.zeros_like(cost, bool)
+    src[5, 5] = True
+    d = cp.cost_distance(cost, src, res=2.0)
+    assert d[5, 10] == pytest.approx(10.0)                # 5 straight steps of 2 m
+    assert d[10, 10] == pytest.approx(5 * np.sqrt(2) * 2)  # 5 diagonal steps
+
+
+def test_backtrack_follows_cheap_corridor():
+    cost = np.full((30, 30), 10.0)
+    cost[:, 15] = 1.0                                     # a road
+    src = np.zeros_like(cost, bool)
+    src[0, 15] = True
+    d = cp.cost_distance(cost, src)
+    path = cp.backtrack(d, cost, (29, 15))
+    assert path[0] == (29, 15) and path[-1] == (0, 15)
+    assert all(c == 15 for _, c in path)
+
+
+def test_unreachable_is_inf():
+    cost = np.ones((10, 10))
+    cost[5, :] = np.inf
+    src = np.zeros_like(cost, bool)
+    src[0, 0] = True
+    d = cp.cost_distance(cost, src)
+    assert np.isinf(d[9, 9]) and np.isfinite(d[4, 9])
+    assert cp.backtrack(d, cost, (9, 9)) == []
+
+
+@pytest.mark.parametrize('size', [3, 9, 31])
+def test_max_filter_matches_scipy(size):
+    ndi = pytest.importorskip('scipy.ndimage')
+    a = np.random.default_rng(3).random((57, 43))
+    ref = ndi.maximum_filter(a, size=size, mode='constant', cval=-np.inf)
+    assert np.allclose(cp.max_filter(a, size), ref)
+
+
+def test_kmeans_separates_clusters():
+    rng = np.random.default_rng(4)
+    pts = np.r_[rng.normal(0, 1, (50, 2)), rng.normal(20, 1, (50, 2))]
+    lab = cp.kmeans(pts, 2)
+    assert len(set(lab[:50])) == 1 and len(set(lab[50:])) == 1 and lab[0] != lab[-1]
+
+
+class _Grid:
+    def __init__(self, res, shape):
+        self.res, self.shape, self.cell_area = res, shape, res * res
+
+    def sub(self, r0, c0, h, w):
+        return _Grid(self.res, (h, w))
+
+
+def _edt(mask, grid, max_dist=None):
+    ndi = pytest.importorskip('scipy.ndimage')
+    if not mask.any():
+        return np.full(mask.shape, np.inf)
+    return ndi.distance_transform_edt(~mask) * grid.res
+
+
+def test_planner_synthetic_valley():
+    pytest.importorskip('scipy.ndimage')
+    n = 300
+    g = _Grid(10.0, (n, n))
+    rows = np.arange(n)[:, None] * np.ones((1, n))
+    depth = np.clip(2.0 - np.abs(rows - 150) * 0.04, 0, None)      # flooded band rows 100-200
+    river = np.abs(rows - 150) <= 2
+    main = np.zeros((n, n), bool)
+    main[:, 90] = True                                              # road with a bridge
+    dem = 400.0 - rows * 0.1
+    settl = np.zeros((n, n), bool)
+    settl[175:190, 70:110] = True
+    cost = ev.build_cost((n, n), {}, main=main, dem=dem, depth=depth, river=river, res=g.res)
+    cand, _ = ev.candidate_land(g, {}, depth, _edt, zones=depth >= 0.3, settlements=settl, dem=dem)
+    r, c = np.nonzero(settl)
+    zone = dict(id='Z1', rows=r, cols=c, area_m2=settl.sum() * g.cell_area)
+    cls = np.where(main, 1, 0).astype(np.uint8)
+    planner = ev.EvacuationPlanner(g, cost, cand, _edt, {'search': 2500}, roads=main, depth=depth, dem=dem,
+                                   road_classes=cls)
+    havens, routes = planner.plan([zone])
+    assert len(havens) == 1 and len(routes) == 1
+    h = havens[0]
+    assert abs(h['cells'] - settl.sum()) <= 2                      # same size as the settlement
+    assert cand[h['rows'], h['cols']].all()                         # every haven cell is suitable
+    rt = routes[0]
+    assert planner.haven_label[rt['rows'][-1], rt['cols'][-1]] == h['label']   # route ends in the haven
+    assert rt['shares']['main'] > 80                                 # and uses the road

@@ -7,6 +7,8 @@ from qgis.PyQt.QtGui import QIcon
 
 from .algorithms.river_corridor import RiverCorridorAlgorithm
 from .algorithms.planning_zones import PlanningZonesAlgorithm
+from .algorithms.evacuation_zones import EvacuationZonesAlgorithm
+from .algorithms.safe_havens_routes import SafeHavensRoutesAlgorithm
 
 PLUGIN_DIR = os.path.dirname(__file__)
 
@@ -15,6 +17,8 @@ class FloodZoningProvider(QgsProcessingProvider):
     def loadAlgorithms(self):  # noqa: N802
         self.addAlgorithm(RiverCorridorAlgorithm())
         self.addAlgorithm(PlanningZonesAlgorithm())
+        self.addAlgorithm(EvacuationZonesAlgorithm())
+        self.addAlgorithm(SafeHavensRoutesAlgorithm())
 
     def id(self):
         return 'floodzoning'

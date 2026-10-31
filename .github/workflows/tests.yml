@@ -14,11 +14,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install tools
-        run: pip install ruff pytest numpy
+        run: pip install ruff pytest numpy scipy scikit-image
       - name: Lint
         run: ruff check --select E,F,W --line-length 130 .
-      - name: Rule tests (no QGIS)
-        run: pytest -v tests/test_zoning_rules.py
+      - name: Core tests (no QGIS)
+        run: pytest -v tests/test_zoning_rules.py tests/test_costpath.py
 
   qgis:
     runs-on: ubuntu-latest

@@ -7,11 +7,13 @@ from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFillSymbol,
+    QgsLineSymbol,
     QgsGeometry,
     QgsProcessingException,
     QgsProcessingLayerPostProcessorInterface,
     QgsRectangle,
     QgsRendererCategory,
+    QgsSingleSymbolRenderer,
     QgsUnitTypes,
 )
 from qgis.PyQt.QtCore import QCoreApplication
@@ -172,25 +174,51 @@ class CategoryStyler(QgsProcessingLayerPostProcessorInterface):
     """
     _keep = []
 
-    def __init__(self, field, categories, layer_name=None):
+    def __init__(self, field, categories, layer_name=None, geometry='polygon'):
         super().__init__()
         self.field = field
         self.categories = categories  # list of (value, label, fill hex, outline hex, opacity)
         self.layer_name = layer_name
+        self.geometry = geometry
 
     @classmethod
-    def create(cls, field, categories, layer_name=None):
-        s = cls(field, categories, layer_name)
+    def create(cls, field, categories, layer_name=None, geometry='polygon'):
+        s = cls(field, categories, layer_name, geometry)
         cls._keep.append(s)
         return s
 
     def postProcessLayer(self, layer, context, feedback):  # noqa: N802
         cats = []
         for value, label, fill, outline, opacity in self.categories:
-            sym = QgsFillSymbol.createSimple({'color': fill, 'outline_color': outline, 'outline_width': '0.1'})
+            if self.geometry == 'line':
+                sym = QgsLineSymbol.createSimple({'line_color': outline, 'line_width': '0.9', 'capstyle': 'round'})
+            else:
+                sym = QgsFillSymbol.createSimple({'color': fill, 'outline_color': outline, 'outline_width': '0.3'})
             sym.setOpacity(opacity)
             cats.append(QgsRendererCategory(value, sym, label))
         layer.setRenderer(QgsCategorizedSymbolRenderer(self.field, cats))
+        if self.layer_name:
+            layer.setName(self.layer_name)
+        layer.triggerRepaint()
+
+
+class SingleStyler(QgsProcessingLayerPostProcessorInterface):
+    """Applies a single fill symbol once the output layer is loaded."""
+    _keep = []
+
+    def __init__(self, fill, outline, layer_name=None):
+        super().__init__()
+        self.fill, self.outline, self.layer_name = fill, outline, layer_name
+
+    @classmethod
+    def create(cls, fill, outline, layer_name=None):
+        s = cls(fill, outline, layer_name)
+        cls._keep.append(s)
+        return s
+
+    def postProcessLayer(self, layer, context, feedback):  # noqa: N802
+        sym = QgsFillSymbol.createSimple({'color': self.fill, 'outline_color': self.outline, 'outline_width': '0.4'})
+        layer.setRenderer(QgsSingleSymbolRenderer(sym))
         if self.layer_name:
             layer.setName(self.layer_name)
         layer.triggerRepaint()

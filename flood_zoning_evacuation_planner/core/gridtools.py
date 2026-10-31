@@ -55,6 +55,15 @@ class Grid:
         """Area in hectares expressed in number of cells (at least 1)."""
         return max(1, int(round(hectares * 10000.0 / self.cell_area)))
 
+    def sub(self, r0, c0, nrows, ncols):
+        """Sub-grid starting at row ``r0``, column ``c0``."""
+        return Grid(self.x0 + c0 * self.res, self.y0 - r0 * self.res, self.res, ncols, nrows, self.wkt)
+
+    def cell_xy(self, rows, cols):
+        """Map coordinates of cell centres."""
+        return (self.x0 + (np.asarray(cols) + 0.5) * self.res,
+                self.y0 - (np.asarray(rows) + 0.5) * self.res)
+
     def srs(self):
         s = osr.SpatialReference()
         s.ImportFromWkt(self.wkt)
@@ -135,6 +144,28 @@ def rasterize_wkb(wkb_list, grid, all_touched=False):
     return ds.GetRasterBand(1).ReadAsArray() > 0
 
 
+def rasterize_values(wkb_values, grid, all_touched=False):
+    """Burn (wkb, integer value) pairs into an int32 raster (0 = no feature; later features win)."""
+    ds = mem_dataset(grid, dtype=gdal.GDT_Int32)
+    if not wkb_values:
+        return np.zeros(grid.shape, np.int32)
+    src = _ogr_memory_datasource()
+    lyr = src.CreateLayer('l', grid.srs(), ogr.wkbUnknown)
+    lyr.CreateField(ogr.FieldDefn('v', ogr.OFTInteger))
+    defn = lyr.GetLayerDefn()
+    for wkb, value in wkb_values:
+        g = ogr.CreateGeometryFromWkb(bytes(wkb))
+        if g is None:
+            continue
+        f = ogr.Feature(defn)
+        f.SetGeometry(g)
+        f.SetField(0, int(value))
+        lyr.CreateFeature(f)
+    opts = ['ATTRIBUTE=v'] + (['ALL_TOUCHED=TRUE'] if all_touched else [])
+    gdal.RasterizeLayer(ds, [1], lyr, options=opts)
+    return ds.GetRasterBand(1).ReadAsArray().astype(np.int32)
+
+
 # --------------------------------------------------------------------------
 # Morphology (distance based, Euclidean, via GDAL proximity)
 # --------------------------------------------------------------------------
@@ -210,7 +241,7 @@ def remove_small_patches(mask, grid, min_area_ha):
 def polygonize(codes, grid, valid=None):
     """Polygonize an integer raster. Returns {code: [wkb, ...]} for cells where
     ``valid`` is True (default: code > 0)."""
-    codes = codes.astype(np.uint8)
+    codes = codes.astype(np.int32)
     if valid is None:
         valid = codes > 0
     src = mem_dataset(grid, codes)
