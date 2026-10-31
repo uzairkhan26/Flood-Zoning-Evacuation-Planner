@@ -38,3 +38,32 @@ def qgis_processing():
         QgsApplication.processingRegistry().addProvider(FloodZoningProvider())
     import processing
     return processing
+
+
+# --------------------------------------------------------------------------
+# On GitHub Actions, report failures as annotations (visible on the run page).
+# --------------------------------------------------------------------------
+def _annotate(kind, title, text):
+    if not os.environ.get('GITHUB_ACTIONS'):
+        return
+    msg = text[-3500:].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+    print('::%s title=%s::%s' % (kind, title.replace(':', ' ').replace(',', ' '), msg), flush=True)
+
+
+def pytest_runtest_logreport(report):
+    if report.failed:
+        _annotate('error', report.nodeid, str(report.longrepr))
+
+
+def pytest_collectreport(report):
+    if report.failed:
+        _annotate('error', 'collection ' + str(report.nodeid), str(report.longrepr))
+
+
+def pytest_sessionstart(session):
+    try:
+        from qgis.core import Qgis
+        from osgeo import gdal
+        _annotate('notice', 'versions', 'QGIS %s, GDAL %s' % (Qgis.QGIS_VERSION, gdal.__version__))
+    except Exception as e:  # pragma: no cover
+        _annotate('notice', 'versions', 'QGIS not importable: %r' % (e,))
