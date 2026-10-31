@@ -35,11 +35,58 @@ def _row_scan(d, w):
     return dr[::-1]
 
 
-def cost_distance(cost, sources, res=1.0, max_iter=200, tol=1e-6):
+def _eps(v):
+    """Tolerance below which a decrease is treated as rounding noise."""
+    return 1e-9 * (1.0 + np.abs(v))
+
+
+def _row_passes(d, wh, wv, wd1, wd2, ver, seen_dn, seen_up):
+    """One top-down and one bottom-up pass over the rows (in place).
+
+    A row is only recomputed when the neighbouring row it reads from has changed
+    since the last time it was processed (``ver`` = change counter per row,
+    ``seen_*`` = counter value last used). Returns True if anything changed.
+    """
+    nr, nc = d.shape
+    any_change = False
+    for r in range(1, nr):              # top -> bottom
+        if ver[r - 1] == seen_dn[r]:
+            continue
+        seen_dn[r] = ver[r - 1]
+        prev = d[r - 1]
+        row = np.minimum(d[r], prev + wv[r - 1])
+        if nc > 1:
+            row[1:] = np.minimum(row[1:], prev[:-1] + wd1[r - 1])
+            row[:-1] = np.minimum(row[:-1], prev[1:] + wd2[r - 1])
+            row = _row_scan(row, wh[r])
+        if (row < d[r] - _eps(d[r])).any():
+            d[r] = np.minimum(d[r], row)
+            ver[r] += 1
+            any_change = True
+    for r in range(nr - 2, -1, -1):     # bottom -> top
+        if ver[r + 1] == seen_up[r]:
+            continue
+        seen_up[r] = ver[r + 1]
+        nxt = d[r + 1]
+        row = np.minimum(d[r], nxt + wv[r])
+        if nc > 1:
+            row[:-1] = np.minimum(row[:-1], nxt[1:] + wd1[r])
+            row[1:] = np.minimum(row[1:], nxt[:-1] + wd2[r])
+            row = _row_scan(row, wh[r])
+        if (row < d[r] - _eps(d[r])).any():
+            d[r] = np.minimum(d[r], row)
+            ver[r] += 1
+            any_change = True
+    return any_change
+
+
+def cost_distance(cost, sources, res=1.0, max_iter=500):
     """Accumulated least cost from ``sources`` (bool array) over ``cost`` (float array).
 
     Cells with cost ``inf``/NaN or <= 0 are impassable. Returns float64 array;
-    unreachable cells are ``inf``.
+    unreachable cells are ``inf``. Each iteration sweeps the rows (down and up,
+    with exact left/right propagation) and then the columns; rows/columns whose
+    neighbours did not change are skipped, so later iterations are cheap.
     """
     c = np.array(cost, dtype=np.float64)
     bad = ~np.isfinite(c) | (c <= 0)
@@ -49,34 +96,37 @@ def cost_distance(cost, sources, res=1.0, max_iter=200, tol=1e-6):
     wv = (c[:-1, :] + c[1:, :]) * (0.5 * res)                    # (nr-1, nc)
     wd1 = (c[:-1, :-1] + c[1:, 1:]) * (0.5 * res * SQRT2)        # (r,j)->(r+1,j+1)
     wd2 = (c[:-1, 1:] + c[1:, :-1]) * (0.5 * res * SQRT2)        # (r,j+1)->(r+1,j)
-    d = np.full((nr, nc), np.inf)
-    d[sources] = 0.0
+    # the same edges seen from the transposed grid (columns become rows)
+    t_wh, t_wv = np.ascontiguousarray(wv.T), np.ascontiguousarray(wh.T)
+    t_wd1, t_wd2 = np.ascontiguousarray(wd1.T), np.ascontiguousarray(wd2.T)
     if not sources.any():
-        return d
+        return np.full((nr, nc), np.inf)
+    d = np.full((nr, nc), 1e300)            # finite "infinity" keeps the scans free of NaN
+    d[sources] = 0.0
     big = BARRIER * res * 0.5
-    d = np.where(np.isinf(d), 1e300, d)     # finite "infinity" for the scans
-    for r in range(nr):
-        if nc > 1:
+    if nc > 1:
+        for r in np.nonzero(sources.any(1))[0]:
             d[r] = _row_scan(d[r], wh[r])
+    ver_r = np.zeros(nr, np.int64)
+    ver_c = np.zeros(nc, np.int64)
+    ver_r[sources.any(1)] = 1
+    ver_c[sources.any(0)] = 1
+    sdn_r, sup_r = np.full(nr, -1, np.int64), np.full(nr, -1, np.int64)
+    sdn_c, sup_c = np.full(nc, -1, np.int64), np.full(nc, -1, np.int64)
     for _ in range(max_iter):
         before = d.copy()
-        for r in range(1, nr):              # top -> bottom
-            prev = d[r - 1]
-            row = np.minimum(d[r], prev + wv[r - 1])
-            if nc > 1:
-                row[1:] = np.minimum(row[1:], prev[:-1] + wd1[r - 1])
-                row[:-1] = np.minimum(row[:-1], prev[1:] + wd2[r - 1])
-                row = _row_scan(row, wh[r])
-            d[r] = row
-        for r in range(nr - 2, -1, -1):     # bottom -> top
-            nxt = d[r + 1]
-            row = np.minimum(d[r], nxt + wv[r])
-            if nc > 1:
-                row[:-1] = np.minimum(row[:-1], nxt[1:] + wd1[r])
-                row[1:] = np.minimum(row[1:], nxt[:-1] + wd2[r])
-                row = _row_scan(row, wh[r])
-            d[r] = row
-        if np.max(np.abs(before - d)) <= tol:
+        ch1 = _row_passes(d, wh, wv, wd1, wd2, ver_r, sdn_r, sup_r)
+        if ch1:   # columns touched by the row passes must be revisited by the column passes
+            ver_c[(d < before - _eps(before)).any(0)] += 1
+        ch2 = False
+        if nr > 1 and nc > 1:
+            before = d.copy()
+            dt = np.ascontiguousarray(d.T)
+            ch2 = _row_passes(dt, t_wh, t_wv, t_wd1, t_wd2, ver_c, sdn_c, sup_c)
+            if ch2:
+                d = np.ascontiguousarray(dt.T)
+                ver_r[(d < before - _eps(before)).any(1)] += 1
+        if not (ch1 or ch2):
             break
     d[d >= big] = np.inf          # paths that had to cross a barrier / never reached
     return d

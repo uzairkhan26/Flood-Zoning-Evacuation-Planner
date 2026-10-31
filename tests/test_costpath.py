@@ -88,6 +88,30 @@ def _edt(mask, grid, max_dist=None):
     return ndi.distance_transform_edt(~mask) * grid.res
 
 
+def _big_pieces(mask, grid, min_cells):
+    ndi = pytest.importorskip('scipy.ndimage')
+    lab, n = ndi.label(mask, structure=np.ones((3, 3)))
+    sizes = np.bincount(lab.ravel())
+    keep = sizes >= min_cells
+    keep[0] = False
+    return keep[lab]
+
+
+def test_planner_skips_land_pieces_that_are_too_small():
+    pytest.importorskip('scipy.ndimage')
+    n = 120
+    g = _Grid(10.0, (n, n))
+    cost = np.full((n, n), 1.8)
+    cand = np.zeros((n, n), bool)
+    for k in range(10):                       # ten small islands of land next to the village (9 cells each)
+        cand[50 + (k % 5) * 6:53 + (k % 5) * 6, 30 + (k // 5) * 6:33 + (k // 5) * 6] = True
+    cand[5:25, 90:110] = True                 # one big piece further away (400 cells)
+    zone = dict(id='Z', rows=np.repeat(np.arange(55, 60), 5), cols=np.tile(np.arange(40, 45), 5), area_m2=50 * 100.0)
+    planner = ev.EvacuationPlanner(g, cost, cand, _edt, {'search': 2000}, size_filter=_big_pieces)
+    havens, routes = planner.plan([zone])
+    assert len(havens) == 1 and havens[0]['rows'].max() < 25 and havens[0]['cols'].min() >= 90
+
+
 def test_planner_synthetic_valley():
     pytest.importorskip('scipy.ndimage')
     n = 300
@@ -106,7 +130,7 @@ def test_planner_synthetic_valley():
     zone = dict(id='Z1', rows=r, cols=c, area_m2=settl.sum() * g.cell_area)
     cls = np.where(main, 1, 0).astype(np.uint8)
     planner = ev.EvacuationPlanner(g, cost, cand, _edt, {'search': 2500}, roads=main, depth=depth, dem=dem,
-                                   road_classes=cls)
+                                   road_classes=cls, size_filter=_big_pieces)
     havens, routes = planner.plan([zone])
     assert len(havens) == 1 and len(routes) == 1
     h = havens[0]

@@ -6,6 +6,7 @@ decides where each safe haven goes and traces the routes. A ``distance_fn``
 (mask, grid, max_dist_m) -> distance array in metres is injected so that the
 plugin can use GDAL proximity while tests can use any implementation.
 """
+import heapq
 import math
 
 import numpy as np
@@ -88,7 +89,7 @@ class EvacuationPlanner:
     """Places one safe haven per evacuation zone and traces one route per sector."""
 
     def __init__(self, grid, cost, candidate, distance_fn, params=None, roads=None, facilities_near=None,
-                 depth=None, dem=None, road_classes=None, feedback=None):
+                 depth=None, dem=None, road_classes=None, feedback=None, size_filter=None):
         self.g = grid
         self.p = dict(DEFAULTS, **(params or {}))
         self.cost = cost
@@ -102,6 +103,8 @@ class EvacuationPlanner:
         self.used = np.zeros(cost.shape, bool)
         self.haven_label = np.zeros(cost.shape, np.int32)
         self.fb = feedback
+        # size_filter(mask, grid, min_cells) -> mask without 8-connected pieces smaller than min_cells
+        self.size_filter = size_filter
         self.road_near = None
         if self.roads.any():
             self.road_near = distance_fn(self.roads, grid, self.p['road_dist']) <= self.p['road_dist']
@@ -148,37 +151,83 @@ class EvacuationPlanner:
                 out.append((int(rr[j]), int(cc[j]), m.sum()))
         return out
 
-    def _grow(self, avail, seed, target):
-        """Grow a compact area of ``target`` cells over ``avail`` from ``seed``. None if not enough room."""
+    @staticmethod
+    def _grow(avail, seed, target):
+        """Grow a compact area of ``target`` cells over ``avail`` from ``seed``.
+
+        Dijkstra over the 8-connected grid (steps of 1 and sqrt 2), stopped as soon as
+        ``target`` cells are reached. Returns (area, None), or (None, reached) if the
+        connected land around the seed is too small.
+        """
         nr, nc = avail.shape
-        radius = int(3 * math.sqrt(target / math.pi)) + 10
-        while True:
-            r0, r1 = max(seed[0] - radius, 0), min(seed[0] + radius + 1, nr)
-            c0, c1 = max(seed[1] - radius, 0), min(seed[1] + radius + 1, nc)
-            sub = avail[r0:r1, c0:c1]
-            src = np.zeros(sub.shape, bool)
-            src[seed[0] - r0, seed[1] - c0] = True
-            g = cost_distance(np.where(sub, 1.0, np.inf), src, 1.0)
-            reach = np.isfinite(g)
-            full = (r0 == 0 and c0 == 0 and r1 == nr and c1 == nc)
-            touches = reach[0].any() or reach[-1].any() or reach[:, 0].any() or reach[:, -1].any()
-            if reach.sum() >= target or full or not touches:
-                break
-            radius *= 2
+        done = np.zeros(avail.shape, bool)
+        best = {seed: 0.0}
+        heap = [(0.0, int(seed[0]), int(seed[1]))]
+        taken = []
+        s2 = math.sqrt(2.0)
+        while heap and len(taken) < target:
+            dd, r, k = heapq.heappop(heap)
+            if done[r, k]:
+                continue
+            done[r, k] = True
+            taken.append((r, k))
+            for dr, dk in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+                rr, kk = r + dr, k + dk
+                if 0 <= rr < nr and 0 <= kk < nc and avail[rr, kk] and not done[rr, kk]:
+                    nd = dd + (s2 if dr and dk else 1.0)
+                    if nd < best.get((rr, kk), np.inf):
+                        best[(rr, kk)] = nd
+                        heapq.heappush(heap, (nd, rr, kk))
+        if len(taken) < target:
+            return None, done
         out = np.zeros(avail.shape, bool)
-        if reach.sum() < target:
-            out[r0:r1, c0:c1] = reach
-            return None, out
-        thr = np.partition(g[reach], target - 1)[target - 1]
-        out[r0:r1, c0:c1] = reach & (g <= thr)
+        idx = np.array(taken)
+        out[idx[:, 0], idx[:, 1]] = True
         return out, None
 
     # ------------------------------------------------------------------
+    def _find_haven(self, rows, cols, origins, target, margin_m):
+        """Search for a haven within ``margin_m`` of the zone. Returns (haven_mask, window) or (None, window)."""
+        res = self.g.res
+        r0, r1, c0, c1 = self._window(rows, cols, int(margin_m / res))
+        win = (slice(r0, r1), slice(c0, c1))
+        cost_w = self.cost[win]
+        src = np.zeros(cost_w.shape, bool)
+        for orow, ocol, _ in origins:
+            src[orow - r0, ocol - c0] = True
+        cum = cost_distance(cost_w, src, res)
+        sub = self.g.sub(r0, c0, r1 - r0, c1 - c0)
+        used_w = self.used[win]
+        used_near = (self.dist(used_w, sub, self.p['clearance']) <= self.p['clearance']) if used_w.any() \
+            else np.zeros(cost_w.shape, bool)
+        avail = self.cand[win] & ~used_near
+        if self.size_filter is not None and avail.any():
+            avail = self.size_filter(avail, sub, target)   # only pieces of land big enough for the haven
+        pref = np.ones(cost_w.shape)
+        if self.fac_near is not None:
+            pref[self.fac_near[win]] *= self.p['pref_facility']
+        if self.road_near is not None:
+            pref[self.road_near[win]] *= self.p['pref_road']
+        score = np.where(avail & np.isfinite(cum), cum * pref, np.inf)
+        for _try in range(40):
+            k = int(np.argmin(score))
+            if not np.isfinite(score.flat[k]):
+                break
+            seed = np.unravel_index(k, score.shape)
+            haven, too_small = self._grow(avail, seed, target)
+            if haven is not None:
+                return haven, (r0, r1, c0, c1)
+            score[too_small] = np.inf
+        return None, (r0, r1, c0, c1)
+
     def plan(self, zones):
-        """zones: list of dict(id, rows, cols, area_m2, ...). Returns (havens, routes)."""
+        """zones: list of dict(id, rows, cols, area_m2, ...). Returns (havens, routes).
+
+        The haven search starts close to the zone (2 km or twice the zone size)
+        and widens step by step up to ``search`` metres.
+        """
         res = self.g.res
         havens, routes = [], []
-        margin = int(self.p['search'] / res)
         for hid, z in enumerate(sorted(zones, key=lambda z: z['area_m2']), 1):
             rows, cols = z['rows'], z['cols']
             if len(rows) == 0:
@@ -187,51 +236,36 @@ class EvacuationPlanner:
             target = max(1, int(round(z['area_m2'] * self.p['haven_factor'] / self.g.cell_area)))
             labels, nsec = self._sectors(rows, cols, z['area_m2'] / 1e4)
             origins = self._origins(rows, cols, labels, nsec)
-            r0, r1, c0, c1 = self._window(rows, cols, margin)
-            win = (slice(r0, r1), slice(c0, c1))
-            cost_w = self.cost[win]
-            src = np.zeros(cost_w.shape, bool)
-            for orow, ocol, _ in origins:
-                src[orow - r0, ocol - c0] = True
-            cum = cost_distance(cost_w, src, res)
-            sub = self.g.sub(r0, c0, r1 - r0, c1 - c0)
-            used_near = self.dist(self.used[win], sub, self.p['clearance']) <= self.p['clearance'] \
-                if self.used[win].any() else np.zeros(cost_w.shape, bool)
-            avail = self.cand[win] & ~used_near
-            pref = np.ones(cost_w.shape)
-            if self.fac_near is not None:
-                pref[self.fac_near[win]] *= self.p['pref_facility']
-            if self.road_near is not None:
-                pref[self.road_near[win]] *= self.p['pref_road']
-            score = np.where(avail & np.isfinite(cum), cum * pref, np.inf)
+            size_m = max(rows.max() - rows.min(), cols.max() - cols.min()) * res
+            margin = min(max(2000.0, 2.0 * size_m, 3.0 * math.sqrt(target * self.g.cell_area)), self.p['search'])
             haven = None
-            for _try in range(40):
-                k = int(np.argmin(score))
-                if not np.isfinite(score.flat[k]):
+            while True:
+                haven, (r0, r1, c0, c1) = self._find_haven(rows, cols, origins, target, margin)
+                if haven is not None or margin >= self.p['search']:
                     break
-                seed = np.unravel_index(k, score.shape)
-                haven, too_small = self._grow(avail, seed, target)
-                if haven is not None:
-                    break
-                score[too_small] = np.inf
+                margin = min(margin * 2.0, self.p['search'])
             if haven is None:
                 self._log('No room for a safe haven of %.1f ha within %.0f km of zone %s.'
                           % (target * self.g.cell_area / 1e4, self.p['search'] / 1000, z['id']))
                 continue
             hr, hc = np.nonzero(haven)
-            self.used[hr + r0, hc + c0] = True
-            self.haven_label[hr + r0, hc + c0] = hid
-            havens.append(dict(label=hid, zone=z, rows=hr + r0, cols=hc + c0, cells=len(hr),
+            hr, hc = hr + r0, hc + c0
+            self.used[hr, hc] = True
+            self.haven_label[hr, hc] = hid
+            havens.append(dict(label=hid, zone=z, rows=hr, cols=hc, cells=len(hr),
                                area_m2=len(hr) * self.g.cell_area, n_routes=0))
-            # routes ---------------------------------------------------------------
-            dist = cost_distance(cost_w, haven, res)
+            # routes: same window in which the haven was found (so every origin can reach it)
+            q0, q1, p0, p1 = r0, r1, c0, c1
+            win = (slice(q0, q1), slice(p0, p1))
+            cost_w = self.cost[win]
+            dist = cost_distance(cost_w, self.haven_label[win] == hid, res)
             for s, (orow, ocol, ncell) in enumerate(origins, 1):
-                path = backtrack(dist, cost_w, (orow - r0, ocol - c0), res)
+                path = backtrack(dist, cost_w, (orow - q0, ocol - p0), res)
                 if not path:
                     self._log('Zone %s: no route found from sector %d.' % (z['id'], s))
                     continue
-                pr = np.array([q[0] for q in path]) + r0
-                pc = np.array([q[1] for q in path]) + c0
+                pr = np.array([q[0] for q in path]) + q0
+                pc = np.array([q[1] for q in path]) + p0
                 routes.append(self._route_stats(z, havens[-1], s, ncell, pr, pc))
                 havens[-1]['n_routes'] += 1
             self._log('Zone %s: safe haven %.1f ha, %d route(s).' % (z['id'], havens[-1]['area_m2'] / 1e4,

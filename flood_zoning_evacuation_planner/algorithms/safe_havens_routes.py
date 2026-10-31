@@ -269,7 +269,8 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
         # plan -------------------------------------------------------------------------------
         planner = EvacuationPlanner(grid, cost, cand, gt.distance_to, params,
                                     roads=road_classes > 0, facilities_near=fac_near, depth=depth, dem=dem,
-                                    road_classes=road_classes, feedback=feedback)
+                                    road_classes=road_classes, feedback=feedback,
+                                    size_filter=lambda m, g, n: m & (gt.sieve(m, g, n) == 1))
         havens, routes = planner.plan(zone_list)
         feedback.setProgress(85)
 
