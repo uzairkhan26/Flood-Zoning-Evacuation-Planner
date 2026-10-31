@@ -120,7 +120,24 @@ class EvacuationPlanner:
         c0, c1 = max(int(cols.min()) - margin, 0), min(int(cols.max()) + margin + 1, nc)
         return r0, r1, c0, c1
 
-    def _sectors(self, rows, cols, area_ha):
+    def _sectors(self, rows, cols, area_ha, parts=None):
+        """Split a zone into sectors of about ``sector_ha``; each one gets its own route.
+
+        ``parts`` (optional, one id per cell) marks separate settlements of the zone:
+        every part gets at least one sector, so no settlement is left without a route.
+        """
+        if parts is not None:
+            ids = np.unique(parts)
+            if len(ids) > 1:
+                labels = np.zeros(len(rows), int)
+                n_total = 0
+                cell_ha = self.g.cell_area / 1e4
+                for pid in ids:
+                    m = parts == pid
+                    lab, n = self._sectors(rows[m], cols[m], m.sum() * cell_ha)
+                    labels[m] = lab + n_total
+                    n_total += n
+                return labels, n_total
         n = max(1, int(math.ceil(area_ha / self.p['sector_ha'])))
         pts = np.c_[rows, cols].astype(float)
         if n == 1:
@@ -221,7 +238,7 @@ class EvacuationPlanner:
         return None, (r0, r1, c0, c1)
 
     def plan(self, zones):
-        """zones: list of dict(id, rows, cols, area_m2, ...). Returns (havens, routes).
+        """zones: list of dict(id, rows, cols, area_m2, parts=None, ...). Returns (havens, routes).
 
         The haven search starts close to the zone (2 km or twice the zone size)
         and widens step by step up to ``search`` metres.
@@ -234,7 +251,7 @@ class EvacuationPlanner:
                 self._log('Zone %s is outside the flood raster; skipped.' % z['id'])
                 continue
             target = max(1, int(round(z['area_m2'] * self.p['haven_factor'] / self.g.cell_area)))
-            labels, nsec = self._sectors(rows, cols, z['area_m2'] / 1e4)
+            labels, nsec = self._sectors(rows, cols, z['area_m2'] / 1e4, z.get('parts'))
             origins = self._origins(rows, cols, labels, nsec)
             size_m = max(rows.max() - rows.min(), cols.max() - cols.min()) * res
             margin = min(max(2000.0, 2.0 * size_m, 3.0 * math.sqrt(target * self.g.cell_area)), self.p['search'])

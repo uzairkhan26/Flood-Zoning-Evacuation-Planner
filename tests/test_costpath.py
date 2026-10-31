@@ -139,3 +139,26 @@ def test_planner_synthetic_valley():
     rt = routes[0]
     assert planner.haven_label[rt['rows'][-1], rt['cols'][-1]] == h['label']   # route ends in the haven
     assert rt['shares']['main'] > 80                                 # and uses the road
+
+
+def test_every_settlement_of_a_zone_gets_a_route():
+    pytest.importorskip('scipy.ndimage')
+    n = 120
+    g = _Grid(10.0, (n, n))
+    cost = np.full((n, n), 1.8)
+    cand = np.zeros((n, n), bool)
+    cand[5:25, 40:80] = True
+    # two small settlements 600 m apart in one zone: together far below one sector (150 ha)
+    a = (np.repeat(np.arange(80, 84), 4), np.tile(np.arange(20, 24), 4))
+    b = (np.repeat(np.arange(80, 84), 4), np.tile(np.arange(80, 84), 4))
+    rows, cols = np.r_[a[0], b[0]], np.r_[a[1], b[1]]
+    parts = np.r_[np.ones(16, int), np.full(16, 2)]
+    planner = ev.EvacuationPlanner(g, cost, cand, _edt, {'search': 2000}, size_filter=_big_pieces)
+    zone = dict(id='Z', rows=rows, cols=cols, area_m2=32 * 100.0)
+    havens, routes = planner.plan([dict(zone)])
+    assert len(routes) == 1                     # without parts: one route for the whole zone
+    planner = ev.EvacuationPlanner(g, cost, cand, _edt, {'search': 2000}, size_filter=_big_pieces)
+    havens, routes = planner.plan([dict(zone, parts=parts)])
+    assert len(havens) == 1 and len(routes) == 2
+    starts = sorted(int(r['cols'][0]) for r in routes)
+    assert starts[0] < 30 and starts[1] >= 80   # one route from each settlement

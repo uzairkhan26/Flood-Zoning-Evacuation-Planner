@@ -14,9 +14,10 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterField,
     QgsProcessingParameterNumber,
+    QgsSpatialIndex,
 )
 
-from .compat import NUMBER_DOUBLE, TYPE_POLYGON, WKB_MULTIPOLYGON, field
+from .compat import NUMBER_DOUBLE, TYPE_ANY_GEOMETRY, TYPE_POLYGON, WKB_MULTIPOLYGON, field, field_names
 from .common import CategoryStyler, set_styler, source_geometries, tr, working_crs
 
 PALETTE = ['#000000', '#0046c8', '#7b2d8e', '#b15928', '#1b9e77', '#d95f02', '#e7298a', '#666666']
@@ -48,6 +49,7 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
     DISTANCE = 'DISTANCE'
     GROUP = 'GROUP_DISTANCE'
     WHOLE = 'WHOLE_SETTLEMENT'
+    BARRIER = 'BARRIERS'
     OUTPUT = 'OUTPUT'
 
     def name(self):
@@ -75,6 +77,8 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
             '<p>Settlements of the same type (e.g. town, village, camp) that are closer than the grouping '
             'distance form one evacuation zone. Each zone gets a code made of the type initials and a number '
             '(e.g. RC-03 for a refugee camp), its settlement names, its area and the area actually at risk.</p>'
+            '<p>Give the river (lines or the river channel polygon) as a <b>barrier</b> so that settlements on '
+            'opposite banks are never put in the same zone: they would need different safe havens.</p>'
             '<p>If the risk layer has a <i>zone_code</i> field (output of "Spatial planning zones"), only '
             'zones 1-3 are used; the green river protection zone is ignored.</p>')
 
@@ -93,6 +97,8 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
             NUMBER_DOUBLE, 100.0, minValue=0.0))
         self.addParameter(QgsProcessingParameterNumber(
             self.GROUP, tr('Group settlements of the same type closer than [m]'), NUMBER_DOUBLE, 1000.0, minValue=0.0))
+        self.addParameter(QgsProcessingParameterFeatureSource(
+            self.BARRIER, tr('Do not group settlements across (e.g. the river)'), [TYPE_ANY_GEOMETRY], optional=True))
         self.addParameter(QgsProcessingParameterBoolean(
             self.WHOLE, tr('Evacuate the whole settlement (not only the part at risk)'), True))
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, tr('Evacuation zones'), TYPE_POLYGON))
@@ -100,8 +106,8 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         settl = self.parameterAsSource(parameters, self.SETTLEMENTS, context)
         risk = self.parameterAsSource(parameters, self.RISK, context)
-        tfield = (self.parameterAsFields(parameters, self.TYPE_FIELD, context) or [None])[0]
-        nfield = (self.parameterAsFields(parameters, self.NAME_FIELD, context) or [None])[0]
+        tfield = (field_names(self, parameters, self.TYPE_FIELD, context) or [None])[0]
+        nfield = (field_names(self, parameters, self.NAME_FIELD, context) or [None])[0]
         dist = self.parameterAsDouble(parameters, self.DISTANCE, context)
         group_d = self.parameterAsDouble(parameters, self.GROUP, context)
         whole = self.parameterAsBool(parameters, self.WHOLE, context)
@@ -153,14 +159,17 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
             feedback.pushWarning(tr('No settlement is within the given distance of a risk area.'))
 
         # group into zones ----------------------------------------------------------
+        bengine = None
+        bsrc = self.parameterAsSource(parameters, self.BARRIER, context)
+        if bsrc is not None:
+            bgeoms = source_geometries(bsrc, crs, context)
+            if bgeoms:
+                barrier = QgsGeometry.unaryUnion(bgeoms)
+                bengine = QgsGeometry.createGeometryEngine(barrier.constGet())
+                bengine.prepareGeometry()
         zones = []
         for t, items in at_risk.items():
-            blobs = QgsGeometry.unaryUnion([g.buffer(group_d / 2.0, 4) if group_d > 0 else g for g, _, _ in items])
-            parts = blobs.asGeometryCollection() if blobs.isMultipart() else [blobs]
-            for part in parts:
-                members = [it for it in items if it[0].intersects(part)]
-                if not members:
-                    continue
+            for members in self._groups(items, group_d, bengine):
                 geom = QgsGeometry.unaryUnion([m[0] if whole else m[2] for m in members])
                 riskg = QgsGeometry.unaryUnion([m[2] for m in members])
                 names = sorted({m[1] for m in members if m[1]})
@@ -197,3 +206,38 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
         if cats:
             set_styler(context, dest, CategoryStyler.create('settl_type', cats))
         return {self.OUTPUT: dest}
+
+    @staticmethod
+    def _groups(items, group_d, barrier_engine=None):
+        """Settlements closer than ``group_d`` form one group, unless the shortest line between
+        them crosses the barrier. Returns lists of items."""
+        n = len(items)
+        parent = list(range(n))
+
+        def root(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        index = QgsSpatialIndex()
+        for i, (g, _, _) in enumerate(items):
+            index.addFeature(i, g.boundingBox())
+        for i, (g, _, _) in enumerate(items):
+            box = g.boundingBox()
+            box.grow(group_d)
+            for j in index.intersects(box):
+                if j <= i or root(i) == root(j):
+                    continue
+                gj = items[j][0]
+                if g.distance(gj) > group_d:
+                    continue
+                if barrier_engine is not None and not g.intersects(gj):
+                    line = g.shortestLine(gj)
+                    if barrier_engine.intersects(line.constGet()):
+                        continue
+                parent[root(j)] = root(i)
+        groups = {}
+        for i in range(n):
+            groups.setdefault(root(i), []).append(items[i])
+        return list(groups.values())

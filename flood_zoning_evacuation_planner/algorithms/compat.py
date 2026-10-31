@@ -59,3 +59,10 @@ else:  # pragma: no cover - QGIS 3.34/3.36
 def field(name, kind, length=0, prec=0):
     """QgsField that works on Qt5 and Qt6 builds. kind: 'int' | 'double' | 'string'."""
     return QgsField(name, _T[kind], len=length, prec=prec)
+
+
+def field_names(alg, parameters, key, context):
+    """Value of a field parameter as a list of names (parameterAsFields is deprecated in QGIS 3.40+)."""
+    if hasattr(alg, 'parameterAsStrings'):
+        return alg.parameterAsStrings(parameters, key, context) or []
+    return alg.parameterAsFields(parameters, key, context) or []

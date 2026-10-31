@@ -17,13 +17,14 @@ sys.path.insert(0, os.path.dirname(HERE))
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from qgis.core import (  # noqa: E402
-    QgsApplication, QgsCategorizedSymbolRenderer, QgsColorRampShader, QgsFillSymbol, QgsHillshadeRenderer,
+    QgsApplication, QgsCategorizedSymbolRenderer, QgsColorRampShader, QgsFillSymbol,
     QgsLayoutExporter, QgsLayoutItemLabel, QgsLayoutItemLegend, QgsLayoutItemMap, QgsLayoutItemScaleBar,
     QgsLayoutPoint, QgsLayoutSize, QgsLineSymbol, QgsMarkerSymbol, QgsPalLayerSettings, QgsPrintLayout,
     QgsProject, QgsRasterLayer, QgsRasterShader, QgsRendererCategory, QgsSingleBandPseudoColorRenderer,
     QgsSingleSymbolRenderer, QgsTextFormat, QgsVectorLayer, QgsVectorLayerSimpleLabeling, QgsRectangle,
-    QgsTextBufferSettings,
+    QgsTextBufferSettings, QgsMapLayerLegendUtils,
 )
+from qgis.PyQt.QtCore import Qt  # noqa: E402
 from qgis.PyQt.QtGui import QColor, QFont  # noqa: E402
 
 QGS = QgsApplication([], False)
@@ -98,27 +99,35 @@ def labels(lyr, field, size=8, color='#000000'):
     lyr.setLabelsEnabled(True)
 
 
-def hillshade(lyr):
-    r = QgsHillshadeRenderer(lyr.dataProvider(), 1, 315, 45)
-    r.setZFactor(8)
-    lyr.setRenderer(r)
-    lyr.setOpacity(0.55)
-
-
-def depth_style(lyr, vmax=3.0):
+def terrain(lyr):
+    st = lyr.dataProvider().bandStatistics(1)
+    lo, hi = st.minimumValue, st.maximumValue
     sh = QgsRasterShader()
-    ramp = QgsColorRampShader(0, vmax)
+    ramp = QgsColorRampShader(lo, hi)
     ramp.setColorRampType(QgsColorRampShader.Interpolated)
     ramp.setColorRampItemList([
-        QgsColorRampShader.ColorRampItem(0.0, QColor('#d6ecfa'), '0 m'),
-        QgsColorRampShader.ColorRampItem(0.5, QColor('#8cc4ec'), '0.5 m'),
-        QgsColorRampShader.ColorRampItem(1.0, QColor('#4a98d6'), '1 m'),
-        QgsColorRampShader.ColorRampItem(2.0, QColor('#1f5fa8'), '2 m'),
-        QgsColorRampShader.ColorRampItem(vmax, QColor('#0b2f6b'), '%g m or more' % vmax)])
+        QgsColorRampShader.ColorRampItem(lo, QColor('#f4f1e6'), '%.0f m' % lo),
+        QgsColorRampShader.ColorRampItem(lo + 0.35 * (hi - lo), QColor('#e6dcc0'), ''),
+        QgsColorRampShader.ColorRampItem(hi, QColor('#b89d72'), '%.0f m' % hi)])
     sh.setRasterShaderFunction(ramp)
     r = QgsSingleBandPseudoColorRenderer(lyr.dataProvider(), 1, sh)
-    r.setClassificationMin(0)
-    r.setClassificationMax(vmax)
+    r.setClassificationMin(lo)
+    r.setClassificationMax(hi)
+    lyr.setRenderer(r)
+
+
+def depth_style(lyr):
+    sh = QgsRasterShader()
+    ramp = QgsColorRampShader(0, 99)
+    ramp.setColorRampType(QgsColorRampShader.Discrete)
+    ramp.setColorRampItemList([
+        QgsColorRampShader.ColorRampItem(0.3, QColor('#c6e2f7'), 'less than 0.3 m'),
+        QgsColorRampShader.ColorRampItem(0.5, QColor('#8cc4ec'), '0.3 - 0.5 m'),
+        QgsColorRampShader.ColorRampItem(1.0, QColor('#4a98d6'), '0.5 - 1 m'),
+        QgsColorRampShader.ColorRampItem(2.0, QColor('#1f5fa8'), '1 - 2 m'),
+        QgsColorRampShader.ColorRampItem(float('inf'), QColor('#0b2f6b'), 'more than 2 m')])
+    sh.setRasterShaderFunction(ramp)
+    r = QgsSingleBandPseudoColorRenderer(lyr.dataProvider(), 1, sh)
     lyr.setRenderer(r)
     lyr.setOpacity(0.85)
 
@@ -135,7 +144,7 @@ def figure(path, title, layers, legend_layers, extent=None, subtitle=''):
     layout = QgsPrintLayout(project)
     layout.initializeDefaults()
     page = layout.pageCollection().page(0)
-    page.setPageSize(QgsLayoutSize(260, 170))
+    page.setPageSize(QgsLayoutSize(270, 170))
     lab = QgsLayoutItemLabel(layout)
     lab.setText(title)
     f = QgsTextFormat()
@@ -158,7 +167,7 @@ def figure(path, title, layers, legend_layers, extent=None, subtitle=''):
         layout.addLayoutItem(sub)
     m = QgsLayoutItemMap(layout)
     m.attemptMove(QgsLayoutPoint(6, 18))
-    m.attemptResize(QgsLayoutSize(190, 146))
+    m.attemptResize(QgsLayoutSize(182, 146))
     m.setLayers(layers)
     m.setCrs(layers[-1].crs())
     m.setExtent(extent or layers[-1].extent())
@@ -170,9 +179,14 @@ def figure(path, title, layers, legend_layers, extent=None, subtitle=''):
     root = leg.model().rootGroup()
     root.removeAllChildren()
     for lyr in legend_layers:
-        root.addLayer(lyr)
+        node = root.addLayer(lyr)
+        nodes = leg.model().layerLegendNodes(node)
+        keep = [i for i, n in enumerate(nodes) if not str(n.data(Qt.DisplayRole) or '').startswith('Band')]
+        if len(keep) < len(nodes):
+            QgsMapLayerLegendUtils.setLegendNodeOrder(node, keep)
+            leg.model().refreshLayerLegend(node)
     leg.setLinkedMap(m)
-    leg.attemptMove(QgsLayoutPoint(199, 18))
+    leg.attemptMove(QgsLayoutPoint(192, 18))
     leg.setSymbolWidth(6)
     leg.setSymbolHeight(3.5)
     layout.addLayoutItem(leg)
@@ -184,7 +198,7 @@ def figure(path, title, layers, legend_layers, extent=None, subtitle=''):
     sb.setNumberOfSegmentsLeft(0)
     sb.setUnitsPerSegment(500)
     sb.setUnitLabel('m')
-    sb.attemptMove(QgsLayoutPoint(199, 150))
+    sb.attemptMove(QgsLayoutPoint(192, 150))
     layout.addLayoutItem(sb)
     s = QgsLayoutExporter.ImageExportSettings()
     s.dpi = 110
@@ -212,6 +226,7 @@ def main(data, out):
                                     SCENARIO='Raised banks', OUTPUT=o('planning_zones_banks.gpkg')))
     ez = run('evacuationzones', {'SETTLEMENTS': p('settlements.gpkg'), 'TYPE_FIELD': 'type', 'NAME_FIELD': 'name',
                                  'RISK_AREAS': pz['OUTPUT'], 'DISTANCE': 100, 'GROUP_DISTANCE': 1000,
+                                 'BARRIERS': rc['OUTPUT_CHANNEL'],
                                  'OUTPUT': o('evacuation_zones.gpkg')})
     sh = run('safehavensroutes', {'EVACUATION_ZONES': ez['OUTPUT'], 'DESIGN_DEPTH': p('depth_rp100.tif'),
                                   'PLANNING_ZONES': pz['OUTPUT'], 'SETTLEMENTS': p('settlements.gpkg'),
@@ -243,8 +258,8 @@ def main(data, out):
         json.dump(results, f, indent=1, default=str)
 
     # figures --------------------------------------------------------------------------
-    dem = rlayer(p('dem.tif'), 'Hillshade')
-    hillshade(dem)
+    dem = rlayer(p('dem.tif'), 'Ground level')
+    terrain(dem)
     d100 = rlayer(p('depth_rp100.tif'), 'Flood depth, 100-year flood')
     depth_style(d100)
     d2 = rlayer(p('depth_rp2.tif'), 'Flood depth, 2-year flood')
@@ -264,7 +279,7 @@ def main(data, out):
     full = QgsRectangle(dem.extent())
 
     figure(o('fig1_inputs.png'), 'Input data: 100-year flood depth, settlements, roads and facilities',
-           [fac, settl_lab, roads, settl, d100, dem], [d100, settl, roads, fac], full,
+           [fac, settl_lab, roads, settl, d100, dem], [d100, settl, roads, fac, dem], full,
            'Example valley (fictional). Flood depths from a hydraulic model; roads with an OpenStreetMap "highway" field.')
 
     ch = vlayer(rc['OUTPUT_CHANNEL'], 'River channel')
@@ -279,7 +294,9 @@ def main(data, out):
 
     def zones_layer(path, name):
         lyr = vlayer(path, name)
-        categorized(lyr, 'zone_code', [(c, '%s (%s)' % (ZONES[c]['name'], ZONES[c]['colour'].lower()),
+        short = {1: 'No development', 2: 'Restricted development', 3: 'Conditional development',
+                 4: 'River protection'}
+        categorized(lyr, 'zone_code', [(c, short[c],
                                         {'color': ZONES[c]['hex'], 'outline_color': '#404040',
                                          'outline_width': '0.15'}) for c in (1, 2, 3, 4)])
         lyr.setOpacity(0.8)

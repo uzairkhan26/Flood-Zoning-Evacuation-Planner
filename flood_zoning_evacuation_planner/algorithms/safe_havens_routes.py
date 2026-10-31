@@ -20,13 +20,14 @@ from qgis.core import (
 from ..core import gridtools as gt
 from ..core.evacuation import DEFAULTS, EvacuationPlanner, build_cost, candidate_land
 from .compat import (NUMBER_DOUBLE, TYPE_LINE, TYPE_POINT, TYPE_POLYGON, WKB_MULTILINESTRING,
-                     WKB_MULTIPOLYGON, add_advanced, field)
+                     WKB_MULTIPOLYGON, add_advanced, field, field_names)
 from .common import (CategoryStyler, SingleStyler, geometries_to_wkb, grid_extent, grid_from_raster,
                      raster_source, set_styler, source_geometries, tr, wkb_to_geometry)
 from .evacuation_zones import PALETTE
 
 MAIN_ROADS = {'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'motorway_link', 'trunk_link',
               'primary_link', 'secondary_link', 'tertiary_link'}
+PART_GAP = 100.0   # m: settlements of one zone further apart than this get separate routes
 PATHS = {'path', 'footway', 'bridleway', 'steps', 'pedestrian', 'cycleway', 'corridor'}
 
 
@@ -160,7 +161,7 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
         max_cells = self.parameterAsDouble(parameters, self.MAX_CELLS, context) * 1e6
 
         def fld(key, default=None):
-            v = self.parameterAsFields(parameters, key, context)
+            v = field_names(self, parameters, key, context)
             return v[0] if v else default
 
         grid, crs = grid_from_raster(depth_layer, cell, max_cells, context, feedback)
@@ -247,7 +248,7 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
         zid_f, ztype_f, zname_f = fld(self.ZONE_ID), fld(self.ZONE_TYPE), fld(self.ZONE_NAME)
         names = zones_src.fields().names()
         ct = QgsCoordinateTransform(zones_src.sourceCrs(), crs, context.transformContext())
-        zone_list, wkb_vals = [], []
+        zone_list, wkb_vals, zone_geoms = [], [], []
         for i, f in enumerate(zones_src.getFeatures(), 1):
             g = QgsGeometry(f.geometry())
             if g.isEmpty():
@@ -259,6 +260,7 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
                 name=str(f[zname_f]) if zname_f in names and f[zname_f] not in (None, '') else '',
                 area_m2=g.area()))
             wkb_vals.append((bytes(g.asWkb().data()), i))
+            zone_geoms.append(g)
         labels = gt.rasterize_values(wkb_vals, grid)
         order = np.argsort(labels, axis=None, kind='stable')
         flat = labels.ravel()[order]
@@ -267,6 +269,18 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
         for z, s, e in zip(zone_list, starts, ends):
             z['rows'], z['cols'] = np.unravel_index(order[s:e], grid.shape)
         del labels, order, flat
+        # separate settlements in a zone (more than PART_GAP apart) each get their own route
+        for z, g in zip(zone_list, zone_geoms):
+            blobs = g.buffer(PART_GAP / 2.0, 4)
+            parts = blobs.asGeometryCollection() if blobs.isMultipart() else [blobs]
+            if len(parts) < 2 or len(z['rows']) == 0:
+                continue
+            r0, c0 = int(z['rows'].min()), int(z['cols'].min())
+            sub = grid.sub(r0, c0, int(z['rows'].max()) - r0 + 1, int(z['cols'].max()) - c0 + 1)
+            ids = gt.rasterize_values([(bytes(p.asWkb().data()), k) for k, p in enumerate(parts, 1)], sub)
+            pid = ids[z['rows'] - r0, z['cols'] - c0]
+            pid[pid == 0] = 1
+            z['parts'] = pid
         feedback.setProgress(45)
 
         # plan -------------------------------------------------------------------------------

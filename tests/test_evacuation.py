@@ -141,3 +141,19 @@ def test_full_workflow(qgis_processing, valley, tmp_path):
                      'Evacuation zones', 'Safe havens', 'Evacuation routes (detail)', 'North village',
                      'SH-' + zones[0]['zone_id'], 'How to read'):
             assert word in text, word
+
+
+def test_river_keeps_banks_apart(qgis_processing, valley, tmp_path):
+    """Two villages 600 m apart on opposite banks: one zone without a barrier, two with the river."""
+    settl = _vector(str(tmp_path / 'two.gpkg'), ogr.wkbPolygon, [
+        (_box(X0 + 1300, RIV + 250, X0 + 1500, RIV + 400), {'kind': 'Village', 'name': 'North'}),
+        (_box(X0 + 1300, RIV - 400, X0 + 1500, RIV - 250), {'kind': 'Village', 'name': 'South'}),
+    ], fields=('kind', 'name'))
+    risk = _vector(str(tmp_path / 'risk.gpkg'), ogr.wkbPolygon, [(_box(X0, RIV - 600, X0 + N * RES, RIV + 600), {})])
+    common = {'SETTLEMENTS': settl, 'TYPE_FIELD': 'kind', 'NAME_FIELD': 'name', 'RISK_AREAS': risk,
+              'GROUP_DISTANCE': 1000}
+    one = qgis_processing.run('floodzoning:evacuationzones', dict(common, OUTPUT=str(tmp_path / 'a.gpkg')))
+    assert [z['n_settl'] for z in _lyr(one['OUTPUT']).getFeatures()] == [2]
+    two = qgis_processing.run('floodzoning:evacuationzones', dict(common, BARRIERS=valley['river'],
+                                                                  OUTPUT=str(tmp_path / 'b.gpkg')))
+    assert sorted(z['name'] for z in _lyr(two['OUTPUT']).getFeatures()) == ['North', 'South']
