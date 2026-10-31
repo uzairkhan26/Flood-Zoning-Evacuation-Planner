@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-and-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install tools
+        run: pip install ruff pytest numpy
+      - name: Lint
+        run: ruff check --select E,F,W --line-length 130 .
+      - name: Rule tests (no QGIS)
+        run: pytest -v tests/test_zoning_rules.py
+
+  qgis:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['qgis/qgis:ltr', 'qgis/qgis:latest']
+    container:
+      image: ${{ matrix.image }}
+      env:
+        QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pytest
+        run: |
+          python3 -m pip install pytest --break-system-packages \
+            || python3 -m pip install pytest \
+            || (apt-get update && apt-get install -y python3-pytest)
+      - name: QGIS version
+        run: python3 -c "from qgis.core import Qgis; print(Qgis.QGIS_VERSION)"
+      - name: Run tests inside QGIS
+        run: python3 scripts/run_tests.py -v tests
+
+  package:
+    runs-on: ubuntu-latest
+    needs: [lint-and-rules]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build plugin zip
+        run: python3 scripts/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-zip
+          path: dist/*.zip
