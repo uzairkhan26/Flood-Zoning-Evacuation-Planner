@@ -176,3 +176,13 @@ def test_geographic_input_is_processed_in_utm(qgis_processing, data, tmp_path):
     lyr = _layer(res, 'OUTPUT')
     assert lyr.crs().authid() == 'EPSG:%d' % EPSG
     assert _area(lyr) > 100
+
+
+@pytest.mark.parametrize('name', ['planning_zones.PlanningZonesAlgorithm', 'river_corridor.RiverCorridorAlgorithm'])
+def test_algorithm_init_directly(qgis_processing, name):
+    """Calls initAlgorithm() directly so Python errors are visible (QGIS hides them)."""
+    import importlib
+    mod, cls = name.split('.')
+    alg = getattr(importlib.import_module('flood_zoning_evacuation_planner.algorithms.' + mod), cls)()
+    alg.initAlgorithm({})
+    assert len(alg.parameterDefinitions()) > 5
