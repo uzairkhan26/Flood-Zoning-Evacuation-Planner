@@ -226,9 +226,10 @@ class PlanningZonesAlgorithm(QgsProcessingAlgorithm):
         advance(tr('Settlements prepared.'))
 
         # 3. hazard rules ---------------------------------------------------
-        red, orange, yellow = zone_masks(depth['design'], depth['medium'], depth['frequent'],
-                                         depth['very_frequent'], settled=settled,
-                                         min_depth=tmin, medium_depth=tmid, deep_depth=tdeep)
+        red, orange, yellow, relaxed = zone_masks(depth['design'], depth['medium'], depth['frequent'],
+                                                  depth['very_frequent'], settled=settled,
+                                                  min_depth=tmin, medium_depth=tmid, deep_depth=tdeep,
+                                                  return_relaxed=True)
         del depth
         a = grid.cell_area / 1e4
         feedback.pushInfo(tr('Raw zones before grid filling: red {0:,.1f} ha, orange {1:,.1f} ha, '
@@ -251,8 +252,9 @@ class PlanningZonesAlgorithm(QgsProcessingAlgorithm):
         if prot_mask is not None and river_mask is not None:
             green_mask = prot_mask & ~river_mask
         z = gt.build_zone_raster(red, orange, yellow, grid, exclude=exclude, protection=green_mask,
-                                 closing_m=closing_m, hole_ha=hole_ha, min_ha=min_ha, sliver_ha=sliver_ha)
-        del red, orange, yellow
+                                 closing_m=closing_m, hole_ha=hole_ha, min_ha=min_ha, sliver_ha=sliver_ha,
+                                 not_red=relaxed if settled is not None else None)
+        del red, orange, yellow, relaxed
         advance(tr('Zones generalised (grid filling).'))
 
         # 6. optional raster output ----------------------------------------

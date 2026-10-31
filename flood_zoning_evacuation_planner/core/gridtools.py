@@ -234,15 +234,15 @@ def write_geotiff(path, array, grid, nodata=None, colours=None):
     ds.SetGeoTransform(grid.geotransform)
     ds.SetProjection(grid.wkt)
     band = ds.GetRasterBand(1)
-    band.WriteArray(array)
-    if nodata is not None:
-        band.SetNoDataValue(nodata)
-    if colours:
+    if colours:  # must be set before any pixel is written
         ct = gdal.ColorTable()
         for v, rgba in colours.items():
             ct.SetColorEntry(int(v), tuple(rgba))
         band.SetRasterColorTable(ct)
         band.SetRasterColorInterpretation(gdal.GCI_PaletteIndex)
+    if nodata is not None:
+        band.SetNoDataValue(nodata)
+    band.WriteArray(array)
     band.FlushCache()
     ds = None
 
@@ -273,21 +273,26 @@ def generalise(mask, grid, exclude=None, closing_m=32.0, hole_ha=5.0, min_ha=3.0
 
 
 def build_zone_raster(red, orange, yellow, grid, exclude=None, protection=None,
-                      closing_m=32.0, hole_ha=5.0, min_ha=3.0, sliver_ha=2.0):
+                      closing_m=32.0, hole_ha=5.0, min_ha=3.0, sliver_ha=2.0, not_red=None):
     """Generalise nested zone masks and return the zone-code raster (uint8).
 
     Zones are nested: Red sits inside Red+Orange, which sits inside
     Red+Orange+Yellow, so the generalised result never has orange "inside" red
     holes. Remaining slivers smaller than ``sliver_ha`` are merged into the
-    neighbouring zone.
+    neighbouring zone. Cells in ``not_red`` (areas released by the settlement
+    rule) are never turned red by the filling; they stay in the restricted zone.
     """
-    from .zoning_rules import compose_zones, ZONE_GREEN
+    from .zoning_rules import compose_zones, ZONE_GREEN, ZONE_ORANGE, ZONE_RED
     r = generalise(red, grid, exclude, closing_m, hole_ha, min_ha)
+    if not_red is not None:
+        r &= ~not_red
     ro = generalise(red | orange, grid, exclude, closing_m, hole_ha, min_ha) | r
     roy = generalise(red | orange | yellow, grid, exclude, closing_m, hole_ha, min_ha) | ro
     z = compose_zones(r, ro, roy)
     if sliver_ha > 0:
         z = sieve(z, grid, grid.area_px(sliver_ha), mask=z > 0).astype(np.uint8)
+        if not_red is not None:
+            z[not_red & (z == ZONE_RED)] = ZONE_ORANGE
     if exclude is not None:
         z[exclude] = 0
     if protection is not None:

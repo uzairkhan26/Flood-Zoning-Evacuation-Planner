@@ -89,11 +89,13 @@ def hazard_classes(design, medium=None, frequent=None, very_frequent=None,
 
 
 def zone_masks(design, medium=None, frequent=None, very_frequent=None,
-               settled=None, min_depth=0.3, medium_depth=0.5, deep_depth=1.0):
+               settled=None, min_depth=0.3, medium_depth=0.5, deep_depth=1.0, return_relaxed=False):
     """Apply the hazard rules and the settlement rule.
 
-    Returns (red, orange, yellow) boolean masks before generalisation.
-    ``settled`` is a boolean mask of existing settlements/facilities (or None).
+    Returns (red, orange, yellow) boolean masks before generalisation, plus the
+    mask of cells moved from red to orange by the settlement rule if
+    ``return_relaxed`` is True. ``settled`` is a boolean mask of existing
+    settlements/facilities (or None).
     """
     high, med, low = hazard_classes(design, medium, frequent, very_frequent,
                                     min_depth, medium_depth, deep_depth)
@@ -107,6 +109,8 @@ def zone_masks(design, medium=None, frequent=None, very_frequent=None,
     red = high & ~soft
     orange = med | soft
     yellow = low
+    if return_relaxed:
+        return red, orange, yellow, soft
     return red, orange, yellow
 
 

@@ -70,3 +70,12 @@ def test_compose_zones_nesting():
     prot = np.array([False, False, False, False, True])
     z = zr.compose_zones(r, ro, roy, prot)
     assert z.tolist() == [1, 2, 3, 0, 4]
+
+
+def test_relaxed_mask_returned():
+    design = arr(0.6, 0.6)
+    frequent = arr(0.4, 0.4)
+    settled = np.array([True, False])
+    red, orange, yellow, relaxed = zr.zone_masks(design, frequent=frequent, settled=settled, return_relaxed=True)
+    assert relaxed.tolist() == [True, False]
+    assert orange.tolist() == [True, False] and red.tolist() == [False, True]
