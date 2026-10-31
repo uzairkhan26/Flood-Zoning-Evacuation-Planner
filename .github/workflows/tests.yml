@@ -18,7 +18,7 @@ jobs:
       - name: Lint
         run: ruff check --select E,F,W --line-length 130 .
       - name: Core tests (no QGIS)
-        run: pytest -v tests/test_zoning_rules.py tests/test_costpath.py
+        run: pytest -v tests/test_zoning_rules.py tests/test_costpath.py tests/test_report.py
 
   qgis:
     runs-on: ubuntu-latest

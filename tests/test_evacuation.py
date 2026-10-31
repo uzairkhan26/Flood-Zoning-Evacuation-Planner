@@ -124,3 +124,20 @@ def test_full_workflow(qgis_processing, valley, tmp_path):
     # the north village evacuates along the main road
     village = [r for r in routes if r['zone_name'] == 'North village'][0]
     assert village['main_pct'] > 50
+
+    # report tables: Word and HTML, from the outputs above (second scenario = the same zones)
+    for ext in ('docx', 'html'):
+        out = run('floodzoning:reporttables', {
+            'TITLE': 'Test valley', 'PLANNING_ZONES': pz['OUTPUT'], 'COMPARE_ZONES': pz['OUTPUT'],
+            'SETTLEMENTS': valley['settlements'], 'EVACUATION_ZONES': ez['OUTPUT'],
+            'SAFE_HAVENS': sh['OUTPUT_HAVENS'], 'ROUTES': sh['OUTPUT_ROUTES'],
+            'OUTPUT': str(tmp_path / ('report.' + ext))})['OUTPUT']
+        if ext == 'html':
+            text = open(out, encoding='utf-8').read()
+        else:
+            import zipfile
+            text = zipfile.ZipFile(out).read('word/document.xml').decode('utf-8')
+        for word in ('Test valley', 'Key figures', 'Spatial planning zones', 'Comparison of planning zones',
+                     'Evacuation zones', 'Safe havens', 'Evacuation routes (detail)', 'North village',
+                     'SH-' + zones[0]['zone_id'], 'How to read'):
+            assert word in text, word
