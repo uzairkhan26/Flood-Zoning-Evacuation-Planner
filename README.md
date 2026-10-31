@@ -2,14 +2,14 @@
 
 A QGIS plugin that turns flood-depth maps from any hydraulic model into practical
 flood-risk management layers: **spatial planning zones** (where building should be
-forbidden, restricted or allowed with conditions), a **river protection zone**, and,
-in upcoming versions, **evacuation zones, safe havens and evacuation routes**.
+forbidden, restricted or allowed with conditions), a **river protection zone**,
+**evacuation zones**, **safe havens** and **evacuation routes**.
 
 It works for any area in the world, in any coordinate system, and needs nothing beyond
 a standard QGIS installation.
 
-> **Status:** in development (version 0.1). The zoning tools are available; the
-> evacuation tools are being added before the first official release (1.0).
+> **Status:** in development (version 0.2). Zoning and evacuation tools are available;
+> report tables and a user guide will follow in the first official release (1.0).
 
 ---
 
@@ -54,14 +54,53 @@ Combines flood **probability** and flood **depth** into four zones:
 
 All thresholds can be changed in the tool dialog.
 
+### 3. Evacuation zones
+
+Finds the settlements that must be evacuated and groups them.
+
+- A settlement is **at risk** if any part of it is within a chosen distance (default 100 m)
+  of the red, orange or yellow zones (or of any flood extent you provide).
+- The **whole settlement** is evacuated, not only the flooded part.
+- Settlements of the same type closer than the grouping distance (default 1 km) form one
+  zone. Zones get codes from the type initials, e.g. `T-01` (town), `RC-02` (refugee camp),
+  `RS-03` (rural settlement).
+
+### 4. Safe havens and evacuation routes
+
+For every evacuation zone it finds one **safe haven** and the **routes** to it.
+
+**Safe haven** – a single area of about the same size as the evacuation zone (factor
+adjustable), on land that is:
+
+- dry in the design flood, at least 150 m from flooded cells and 200 m from the planning zones;
+- outside settlements (50 m clearance) and at least 150 m from the river;
+- if a DEM is given, at least 0.5 m above the highest nearby flood water level;
+- as close as possible (in travel effort) to the zone, preferably next to public
+  facilities (schools, health centres) and roads.
+
+**Evacuation routes** – large zones are split into sectors (default about 150 ha each) and
+each sector gets one least-cost walking route from its nearest road point to the haven.
+Travel effort per metre:
+
+| Surface | Relative effort |
+|---|---|
+| Main road | 1.0 |
+| Minor road / track | 1.1 |
+| Footpath | 1.3 |
+| Open ground | 1.8 |
+
+Effort increases with slope (from the DEM) and with water depth (×3 shallow, ×40 deep);
+the river can only be crossed where a road crosses it. Each route reports its length,
+walking time (3 km/h), share of main road / minor road / path / open ground, the length
+through flood water, and start and end elevations.
+
+Road classes are read from an OpenStreetMap-style `highway` field by default; any
+other field can be chosen.
+
 ### Coming next (before version 1.0)
 
-- **Evacuation zones**: whole settlements at risk, grouped by type (urban, rural, camps…).
-- **Safe havens**: dry, high ground of about the same area as each settlement, preferably
-  near public facilities and roads.
-- **Evacuation routes**: least-cost routes using roads first, then footpaths, then open
-  ground, avoiding deep water.
-- **Report tables** for zones, safe havens and routes.
+- **Report tables** for zones, safe havens and routes (ready to paste into a report).
+- User guide with a worked example.
 
 ---
 
@@ -89,6 +128,9 @@ Requires QGIS 3.34 or newer (QGIS 4 supported). No extra Python packages are nee
 | Settlements (optional) | Polygons of built-up areas (e.g. OpenStreetMap `landuse=residential`). |
 | Facilities (optional) | Points or polygons of schools, health centres, etc. |
 | River lines / polygons | For the river corridor tool. |
+| Roads and paths (optional) | Lines, e.g. OpenStreetMap roads with a `highway` field. |
+| DEM (optional) | Ground elevation [m], for the freeboard check and slope on routes. |
+| Model domain (optional) | Polygon of the hydraulic model extent: safe havens are only placed where the flood is known. |
 
 Large study areas are processed at a coarser cell size automatically (depths are
 averaged); you can set the cell size yourself in the advanced parameters.

@@ -232,6 +232,9 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
                           depth=depth, river=river_mask, res=grid.res)
         cand, height_known = candidate_land(grid, params, depth, gt.distance_to, zones=zones_mask,
                                             settlements=settl_mask, domain=domain_mask, dem=dem)
+        if river_mask is not None and river_mask.any():   # rivers left as no-data in the depth raster
+            dmin = params['min_dist_flood']
+            cand &= gt.distance_to(river_mask, grid, dmin) >= dmin
         a = grid.cell_area / 1e4
         feedback.pushInfo(tr('Land suitable for safe havens: {0:,.0f} ha.').format(cand.sum() * a))
         if not cand.any():
