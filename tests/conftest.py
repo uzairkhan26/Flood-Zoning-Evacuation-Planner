@@ -50,14 +50,22 @@ def _annotate(kind, title, text):
     print('::%s title=%s::%s' % (kind, title.replace(':', ' ').replace(',', ' '), msg), flush=True)
 
 
+_FAILURES = []
+
+
 def pytest_runtest_logreport(report):
     if report.failed:
-        _annotate('error', report.nodeid, str(report.longrepr))
+        _FAILURES.append((report.nodeid + ' [' + report.when + ']', str(report.longrepr)))
 
 
 def pytest_collectreport(report):
     if report.failed:
-        _annotate('error', 'collection ' + str(report.nodeid), str(report.longrepr))
+        _FAILURES.append(('collection ' + str(report.nodeid), str(report.longrepr)))
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    for title, text in _FAILURES:
+        _annotate('error', title, text)
 
 
 def pytest_sessionstart(session):
