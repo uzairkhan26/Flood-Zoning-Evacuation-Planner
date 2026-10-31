@@ -28,6 +28,9 @@ from qgis.PyQt.QtGui import QColor, QFont  # noqa: E402
 
 QGS = QgsApplication([], False)
 QGS.initQgis()
+for _p in ('/usr/share/qgis/python/plugins', '/usr/lib/qgis/python/plugins'):
+    if os.path.isdir(_p) and _p not in sys.path:
+        sys.path.append(_p)
 from processing.core.Processing import Processing  # noqa: E402
 
 Processing.initialize()
