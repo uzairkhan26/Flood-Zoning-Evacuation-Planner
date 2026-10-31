@@ -7,8 +7,8 @@ from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFillSymbol,
-    QgsLineSymbol,
     QgsGeometry,
+    QgsLineSymbol,
     QgsProcessingException,
     QgsProcessingLayerPostProcessorInterface,
     QgsRectangle,
@@ -25,6 +25,14 @@ try:  # QGIS >= 3.30
     _METRES = Qgis.DistanceUnit.Meters
 except (ImportError, AttributeError):  # pragma: no cover - older QGIS
     _METRES = QgsUnitTypes.DistanceMeters
+
+
+GUIDE_URL = 'https://github.com/uzairkhan26/Flood-Zoning-Evacuation-Planner/blob/main/docs/user_guide.md'
+
+
+def guide(anchor):
+    """Link to a section of the user guide (shown by the Help button of each tool)."""
+    return GUIDE_URL + '#' + anchor
 
 
 def tr(text):

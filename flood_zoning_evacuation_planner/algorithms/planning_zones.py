@@ -18,12 +18,20 @@ from qgis.core import (
 )
 
 from ..core import gridtools as gt
-from ..core.zoning_rules import (ZONES, ZONE_GREEN, ZONE_ORANGE, ZONE_RED, ZONE_YELLOW,
-                                 zone_masks)
-from .compat import (NUMBER_DOUBLE, TYPE_POINT, TYPE_POLYGON, WKB_MULTIPOLYGON,
-                     add_advanced, field)
-from .common import (CategoryStyler, geometries_to_wkb, grid_extent, grid_from_raster,
-                     raster_source, set_styler, source_geometries, tr, wkb_to_geometry)
+from ..core.zoning_rules import ZONE_GREEN, ZONE_ORANGE, ZONE_RED, ZONE_YELLOW, ZONES, zone_masks
+from .common import (
+    CategoryStyler,
+    geometries_to_wkb,
+    grid_extent,
+    grid_from_raster,
+    guide,
+    raster_source,
+    set_styler,
+    source_geometries,
+    tr,
+    wkb_to_geometry,
+)
+from .compat import NUMBER_DOUBLE, TYPE_POINT, TYPE_POLYGON, WKB_MULTIPOLYGON, add_advanced, field
 
 RESAMPLING = ['average', 'max', 'nearest']
 
@@ -69,6 +77,9 @@ class PlanningZonesAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):  # noqa: N802
         return PlanningZonesAlgorithm()
+
+    def helpUrl(self):  # noqa: N802
+        return guide('step-2-spatial-planning-zones')
 
     def shortHelpString(self):  # noqa: N802
         return tr(

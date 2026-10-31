@@ -19,10 +19,30 @@ from qgis.core import (
 
 from ..core import gridtools as gt
 from ..core.evacuation import DEFAULTS, EvacuationPlanner, build_cost, candidate_land
-from .compat import (NUMBER_DOUBLE, TYPE_LINE, TYPE_POINT, TYPE_POLYGON, WKB_MULTILINESTRING,
-                     WKB_MULTIPOLYGON, add_advanced, field, field_names)
-from .common import (CategoryStyler, SingleStyler, geometries_to_wkb, grid_extent, grid_from_raster,
-                     raster_source, set_styler, source_geometries, tr, wkb_to_geometry)
+from .common import (
+    CategoryStyler,
+    SingleStyler,
+    geometries_to_wkb,
+    grid_extent,
+    grid_from_raster,
+    guide,
+    raster_source,
+    set_styler,
+    source_geometries,
+    tr,
+    wkb_to_geometry,
+)
+from .compat import (
+    NUMBER_DOUBLE,
+    TYPE_LINE,
+    TYPE_POINT,
+    TYPE_POLYGON,
+    WKB_MULTILINESTRING,
+    WKB_MULTIPOLYGON,
+    add_advanced,
+    field,
+    field_names,
+)
 from .evacuation_zones import PALETTE
 
 MAIN_ROADS = {'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'motorway_link', 'trunk_link',
@@ -97,6 +117,9 @@ class SafeHavensRoutesAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):  # noqa: N802
         return SafeHavensRoutesAlgorithm()
+
+    def helpUrl(self):  # noqa: N802
+        return guide('step-4-safe-havens-and-evacuation-routes')
 
     def shortHelpString(self):  # noqa: N802
         return tr(

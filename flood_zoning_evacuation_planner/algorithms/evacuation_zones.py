@@ -17,8 +17,8 @@ from qgis.core import (
     QgsSpatialIndex,
 )
 
+from .common import CategoryStyler, guide, set_styler, source_geometries, tr, working_crs
 from .compat import NUMBER_DOUBLE, TYPE_ANY_GEOMETRY, TYPE_POLYGON, WKB_MULTIPOLYGON, field, field_names
-from .common import CategoryStyler, set_styler, source_geometries, tr, working_crs
 
 PALETTE = ['#000000', '#0046c8', '#7b2d8e', '#b15928', '#1b9e77', '#d95f02', '#e7298a', '#666666']
 
@@ -66,6 +66,9 @@ class EvacuationZonesAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):  # noqa: N802
         return EvacuationZonesAlgorithm()
+
+    def helpUrl(self):  # noqa: N802
+        return guide('step-3-evacuation-zones')
 
     def shortHelpString(self):  # noqa: N802
         return tr(

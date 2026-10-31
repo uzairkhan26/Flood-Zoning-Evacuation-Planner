@@ -8,6 +8,7 @@ the report (Word + HTML), map figures (PNG) and a results.json with the key numb
 Used by the 'Example and figures' GitHub workflow; needs QGIS 3.34+ (headless is fine).
 """
 import json
+import math
 import os
 import sys
 import traceback
@@ -101,7 +102,7 @@ def labels(lyr, field, size=8, color='#000000'):
 
 def terrain(lyr):
     st = lyr.dataProvider().bandStatistics(1)
-    lo, hi = st.minimumValue, st.maximumValue
+    lo, hi = math.floor(st.minimumValue), math.ceil(st.maximumValue)
     sh = QgsRasterShader()
     ramp = QgsColorRampShader(lo, hi)
     ramp.setColorRampType(QgsColorRampShader.Interpolated)
@@ -139,7 +140,7 @@ ROAD_CATS = [('secondary', 'Main road', {'line_color': '#b2182b', 'line_width': 
 
 
 # ----------------------------------------------------------------------------- figures
-def figure(path, title, layers, legend_layers, extent=None, subtitle=''):
+def figure(path, title, layers, legend_layers, extent=None, subtitle='', bar=500):
     project = QgsProject.instance()
     layout = QgsPrintLayout(project)
     layout.initializeDefaults()
@@ -196,7 +197,7 @@ def figure(path, title, layers, legend_layers, extent=None, subtitle=''):
     sb.applyDefaultSize()
     sb.setNumberOfSegments(2)
     sb.setNumberOfSegmentsLeft(0)
-    sb.setUnitsPerSegment(500)
+    sb.setUnitsPerSegment(bar)
     sb.setUnitLabel('m')
     sb.attemptMove(QgsLayoutPoint(192, 150))
     layout.addLayoutItem(sb)
@@ -290,7 +291,8 @@ def main(data, out):
     zoom = QgsRectangle(c.x() - 900, c.y() - 580, c.x() + 900, c.y() + 580)
     figure(o('fig2_river_corridor.png'), 'Step 1 - River corridor: channel and 30 m protection buffer',
            [roads, ch, bf, d2, dem], [d2, ch, bf], zoom,
-           'Channel = continuous strip at least 2 m deep in the 2-year flood, along the river line (zoomed in).')
+           'Channel = continuous strip at least 2 m deep in the 2-year flood, along the river line (zoomed in).',
+           bar=200)
 
     def zones_layer(path, name):
         lyr = vlayer(path, name)

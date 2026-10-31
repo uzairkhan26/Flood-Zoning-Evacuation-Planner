@@ -247,8 +247,9 @@ def _summary(zones, compare, evac, havens, routes):
             s.append('%s%% of the total route length is on roads and tracks.' % num(road, 0))
         wet = [r for r in routes if (_f(r.get('wet_m')) or 0) > 0]
         if wet:
-            s.append('%d routes pass through flood water of the design event for a short distance '
-                     '(%s m in total): check these points on site.' % (
+            s.append('%d routes cross ground under deep water (0.3 m or more by default) in the design flood, '
+                     '%s m in total. People there must leave before the flood arrives; check these '
+                     'stretches on site.' % (
                          len(wet), num(sum(_f(r.get('wet_m')) for r in wet), 0)))
     return s
 
@@ -428,8 +429,9 @@ def _glossary(zones, evac, havens, routes):
                  'the river is crossed only on roads.')
         g.append('Walking time: at %s, the pace of people walking with children and belongings.' % (
             ('about %s km/h' % num(sp, 1)) if sp else 'a slow walking pace'))
-        g.append('Through flood water: length of the route on ground that is wet in the design event, '
-                 'usually short stretches at road crossings or along the flood edge.')
+        g.append('Through flood water: length of the route where the design flood is deep enough to be '
+                 'unsafe (0.3 m or more by default). It is usually unavoidable for settlements inside the '
+                 'floodplain, so these places must be evacuated early, before the water rises.')
     return g
 
 

@@ -13,7 +13,7 @@ from qgis.core import (
 )
 
 from ..core.report import build_report
-from .common import tr, working_crs
+from .common import guide, tr, working_crs
 from .compat import TYPE_LINE, TYPE_POLYGON
 
 
@@ -50,6 +50,9 @@ class ReportTablesAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):  # noqa: N802
         return ReportTablesAlgorithm()
+
+    def helpUrl(self):  # noqa: N802
+        return guide('step-5-report-tables')
 
     def shortHelpString(self):  # noqa: N802
         return tr(

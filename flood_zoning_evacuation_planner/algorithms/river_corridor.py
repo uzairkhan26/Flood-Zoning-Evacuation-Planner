@@ -18,9 +18,19 @@ from qgis.core import (
 )
 
 from ..core import gridtools as gt
+from .common import (
+    CategoryStyler,
+    geometries_to_wkb,
+    grid_extent,
+    grid_from_raster,
+    guide,
+    raster_source,
+    set_styler,
+    source_geometries,
+    tr,
+    working_crs,
+)
 from .compat import NUMBER_DOUBLE, TYPE_LINE, TYPE_POLYGON, WKB_MULTIPOLYGON, add_advanced, field
-from .common import (CategoryStyler, geometries_to_wkb, grid_extent, grid_from_raster, raster_source,
-                     set_styler, source_geometries, tr, working_crs)
 
 METHOD_POLYGONS, METHOD_RASTER, METHOD_FIXED = 0, 1, 2
 
@@ -57,6 +67,9 @@ class RiverCorridorAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):  # noqa: N802
         return RiverCorridorAlgorithm()
+
+    def helpUrl(self):  # noqa: N802
+        return guide('step-1-river-corridor')
 
     def shortHelpString(self):  # noqa: N802
         return tr(
