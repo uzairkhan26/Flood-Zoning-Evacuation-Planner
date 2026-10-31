@@ -1,0 +1,39 @@
+name: Example and figures
+
+# Runs the worked example of the user guide in QGIS and pushes the outputs, figures and log
+# to the 'docs-figures' branch (start it by hand from the Actions tab).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    container:
+      image: qgis/qgis:ltr
+      env:
+        QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Install git
+        run: command -v git || (apt-get update && apt-get install -y git)
+      - uses: actions/checkout@v4
+      - name: Make example data
+        run: python3 scripts/make_example_data.py example_data
+      - name: Run the example
+        run: |
+          mkdir -p docs_out
+          python3 scripts/run_example.py example_data docs_out 2>&1 | tee docs_out/log.txt
+      - name: Push results to the docs-figures branch
+        if: always()
+        run: |
+          mkdir -p docs_out
+          cp -r example_data docs_out/ || true
+          cd docs_out
+          git init -q -b docs-figures
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Example outputs and figures (${GITHUB_SHA})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" docs-figures
