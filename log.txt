@@ -1,0 +1,23 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+/usr/share/qgis/python/plugins/processing/algs/help/__init__.py:40: DeprecationWarning: codecs.open() is deprecated. Use open() instead.
+  with codecs.open(filename, encoding="utf-8") as stream:
+Running rivercorridor
+Running planningzones
+Running planningzones
+Running evacuationzones
+Running safehavensroutes
+Running reporttables
+Running reporttables
+ERROR 6: The PNG driver does not support update access to existing datasets.
+figure fig1_inputs.png ok
+ERROR 6: The PNG driver does not support update access to existing datasets.
+figure fig2_river_corridor.png ok
+ERROR 6: The PNG driver does not support update access to existing datasets.
+figure fig3_planning_zones.png ok
+ERROR 6: The PNG driver does not support update access to existing datasets.
+figure fig3b_planning_zones_banks.png ok
+ERROR 6: The PNG driver does not support update access to existing datasets.
+figure fig4_evacuation_zones.png ok
+ERROR 6: The PNG driver does not support update access to existing datasets.
+figure fig5_havens_routes.png ok
+done

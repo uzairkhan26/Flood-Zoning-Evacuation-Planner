@@ -1,0 +1,201 @@
+{
+ "planning_zones": [
+  {
+   "zone_code": 1,
+   "zone": "No development zone",
+   "area_ha": 473.61,
+   "criteria": "Flooded (>= 0.3 m) in the very frequent or frequent event, or deeper than 1 m in the design event"
+  },
+  {
+   "zone_code": 2,
+   "zone": "Restricted development zone",
+   "area_ha": 311.24,
+   "criteria": "Flooded (>= 0.3 m) in the medium-probability event, or 0.5-1 m deep in the design event; plus shallow frequent flooding inside existing settlements"
+  },
+  {
+   "zone_code": 3,
+   "zone": "Conditional development zone",
+   "area_ha": 127.07,
+   "criteria": "Flooded only in the design event, 0.3-0.5 m deep"
+  },
+  {
+   "zone_code": 4,
+   "zone": "Protection zone",
+   "area_ha": 52.99,
+   "criteria": "River protection buffer"
+  }
+ ],
+ "planning_zones_banks": [
+  {
+   "zone_code": 1,
+   "zone": "No development zone",
+   "area_ha": 286.56
+  },
+  {
+   "zone_code": 2,
+   "zone": "Restricted development zone",
+   "area_ha": 310.77
+  },
+  {
+   "zone_code": 3,
+   "zone": "Conditional development zone",
+   "area_ha": 124.32
+  },
+  {
+   "zone_code": 4,
+   "zone": "Protection zone",
+   "area_ha": 52.99
+  }
+ ],
+ "evacuation_zones": [
+  {
+   "zone_id": "RC-01",
+   "settl_type": "Refugee camp",
+   "name": "Hope camp",
+   "n_settl": 1,
+   "area_ha": 24.32,
+   "risk_ha": 23.58
+  },
+  {
+   "zone_id": "T-02",
+   "settl_type": "Town",
+   "name": "Riverside town",
+   "n_settl": 1,
+   "area_ha": 63.2,
+   "risk_ha": 43.86
+  },
+  {
+   "zone_id": "V-03",
+   "settl_type": "Village",
+   "name": "Kolo",
+   "n_settl": 1,
+   "area_ha": 7.95,
+   "risk_ha": 7.95
+  },
+  {
+   "zone_id": "V-04",
+   "settl_type": "Village",
+   "name": "Mabek, Mabek east",
+   "n_settl": 2,
+   "area_ha": 11.37,
+   "risk_ha": 10.9
+  },
+  {
+   "zone_id": "V-05",
+   "settl_type": "Village",
+   "name": "Tiri",
+   "n_settl": 1,
+   "area_ha": 4.27,
+   "risk_ha": 4.27
+  }
+ ],
+ "safe_havens": [
+  {
+   "haven_id": "SH-V-05",
+   "zone_ha": 4.27,
+   "haven_ha": 4.27,
+   "ratio": 1.0,
+   "dist_flood": 230.0,
+   "height_chk": "yes",
+   "facility": ""
+  },
+  {
+   "haven_id": "SH-V-03",
+   "zone_ha": 7.95,
+   "haven_ha": 7.95,
+   "ratio": 1.0,
+   "dist_flood": 170.0,
+   "height_chk": "yes",
+   "facility": "South primary school (71 m)"
+  },
+  {
+   "haven_id": "SH-V-04",
+   "zone_ha": 11.37,
+   "haven_ha": 11.37,
+   "ratio": 1.0,
+   "dist_flood": 150.0,
+   "height_chk": "yes",
+   "facility": ""
+  },
+  {
+   "haven_id": "SH-RC-01",
+   "zone_ha": 24.32,
+   "haven_ha": 24.32,
+   "ratio": 1.0,
+   "dist_flood": 150.0,
+   "height_chk": "yes",
+   "facility": ""
+  },
+  {
+   "haven_id": "SH-T-02",
+   "zone_ha": 63.2,
+   "haven_ha": 63.2,
+   "ratio": 1.0,
+   "dist_flood": 150.0,
+   "height_chk": "yes",
+   "facility": "District health centre (inside the haven)"
+  }
+ ],
+ "routes": [
+  {
+   "route_id": "V-05-R1",
+   "length_m": 831.0,
+   "walk_min": 17.0,
+   "main_pct": 0.0,
+   "minor_pct": 95.0,
+   "path_pct": 0.0,
+   "open_pct": 5.0,
+   "wet_m": 424.0
+  },
+  {
+   "route_id": "V-03-R1",
+   "length_m": 895.0,
+   "walk_min": 18.0,
+   "main_pct": 0.0,
+   "minor_pct": 16.0,
+   "path_pct": 0.0,
+   "open_pct": 84.0,
+   "wet_m": 225.0
+  },
+  {
+   "route_id": "V-04-R1",
+   "length_m": 406.0,
+   "walk_min": 8.0,
+   "main_pct": 0.0,
+   "minor_pct": 0.0,
+   "path_pct": 39.0,
+   "open_pct": 61.0,
+   "wet_m": 0.0
+  },
+  {
+   "route_id": "V-04-R2",
+   "length_m": 446.0,
+   "walk_min": 9.0,
+   "main_pct": 0.0,
+   "minor_pct": 71.0,
+   "path_pct": 0.0,
+   "open_pct": 29.0,
+   "wet_m": 80.0
+  },
+  {
+   "route_id": "RC-01-R1",
+   "length_m": 511.0,
+   "walk_min": 10.0,
+   "main_pct": 0.0,
+   "minor_pct": 24.0,
+   "path_pct": 0.0,
+   "open_pct": 76.0,
+   "wet_m": 181.0
+  },
+  {
+   "route_id": "T-02-R1",
+   "length_m": 663.0,
+   "walk_min": 13.0,
+   "main_pct": 0.0,
+   "minor_pct": 0.0,
+   "path_pct": 0.0,
+   "open_pct": 100.0,
+   "wet_m": 28.0
+  }
+ ]
+}

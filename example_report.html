@@ -1,0 +1,353 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Example valley - flood zoning and evacuation</title><style>
+body{font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#222;max-width:1100px;margin:24px auto;padding:0 16px}
+h1{font-size:18pt;margin:0 0 2px;color:#1f3864}
+.sub{color:#666;margin:0 0 18px}
+h2{font-size:13pt;color:#1f3864;border-bottom:1px solid #c9d3e6;padding-bottom:3px;margin-top:26px}
+table{border-collapse:collapse;width:100%;margin:4px 0 4px;font-size:9.5pt}
+th,td{border:1px solid #a6a6a6;padding:3px 6px;vertical-align:top}
+th{background:#d9e2f3;text-align:left}
+td.r,th.r{text-align:right}
+tr.b td{font-weight:bold;background:#f2f2f2}
+.cap{font-weight:bold;margin:14px 0 2px}
+.note{font-style:italic;color:#555;font-size:9pt;margin:2px 0 14px}
+</style></head><body>
+<h1>Example valley - flood zoning and evacuation</h1><p class="sub">Report tables – 31 October 2026</p>
+<h2>Key figures</h2>
+<ul><li>The flood zones (Current situation) cover 911.9 ha in total: Red 473.6 ha, Orange 311.2 ha, Yellow 127.1 ha.</li><li>The river protection strip covers 53.0 ha.</li><li>59.1 ha of existing settlements lie in the red or orange zones.</li><li>Compared with &quot;Current situation&quot;, the flood zones of &quot;Raised banks&quot; are 190.3 ha (21%) smaller.</li><li>6 settlements in 5 evacuation zones need to be evacuated (111.1 ha).</li><li>5 safe havens were found (5 of 5 evacuation zones); each is about the same size as its zone.</li><li>6 evacuation routes, 3.8 km in total. The longest is V-03-R1: 0.9 km, about 18 minutes on foot.</li><li>37% of the total route length is on roads and tracks.</li><li>5 routes cross ground under deep water (0.3 m or more by default) in the design flood, 938 m in total. People there must leave before the flood arrives; check these stretches on site.</li></ul>
+<h2>Spatial planning zones</h2>
+<p class="cap">Table 1. Spatial planning zones – Current situation</p><table><tr>
+<th class="l">Zone</th><th class="l">Flood condition</th><th class="l">What it means for planning</th><th class="r">Area (ha)</th><th class="r">Share (%)</th><th class="r">Of which settled (ha)</th>
+</tr>
+<tr>
+<td class="l" style="background:#F29798">No development zone (Red)</td>
+<td class="l">Flooded (&gt;= 0.3 m) in the very frequent or frequent event, or deeper than 1 m in the design event</td>
+<td class="l">No new buildings or infrastructure; no growth of existing settlements; relocate or protect critical facilities; keep as floodplain or farmland.</td>
+<td class="r">473.6</td>
+<td class="r">52</td>
+<td class="r">23.7</td>
+</tr>
+<tr>
+<td class="l" style="background:#FFC58C">Restricted development zone (Orange)</td>
+<td class="l">Flooded (&gt;= 0.3 m) in the medium-probability event, or 0.5-1 m deep in the design event; plus shallow frequent flooding inside existing settlements</td>
+<td class="l">No new critical facilities (health, schools, shelters, camps); only flood-proofed repair of existing buildings; raised floors.</td>
+<td class="r">311.2</td>
+<td class="r">34</td>
+<td class="r">35.4</td>
+</tr>
+<tr>
+<td class="l" style="background:#FFED8C">Conditional development zone (Yellow)</td>
+<td class="l">Flooded only in the design event, 0.3-0.5 m deep</td>
+<td class="l">Building allowed if floors are above the design flood level plus a safety margin, with drainage and a dry access route.</td>
+<td class="r">127.1</td>
+<td class="r">14</td>
+<td class="r">16.2</td>
+</tr>
+<tr>
+<td class="l" style="background:#A3D4A0">Protection zone (Green)</td>
+<td class="l">River protection buffer</td>
+<td class="l">River protection strip: no buildings, fences or obstructions; keep vegetation and maintenance access.</td>
+<td class="r">53.0</td>
+<td class="r"></td>
+<td class="r">0.0</td>
+</tr>
+<tr class="b">
+<td class="l">Total flood zones (red + orange + yellow)</td>
+<td class="l"></td>
+<td class="l"></td>
+<td class="r">911.9</td>
+<td class="r">100</td>
+<td class="r">75.3</td>
+</tr>
+</table><p class="note">How to read: each row is one zone. &quot;Flood condition&quot; is the rule used to draw it; &quot;Share&quot; is its part of the red + orange + yellow area. The protection strip is not counted in the total. &quot;Of which settled&quot; is the area of existing settlements inside the zone.</p>
+<p class="cap">Table 2. Comparison of planning zones: Current situation and Raised banks</p><table><tr>
+<th class="l">Zone</th><th class="r">Current situation (ha)</th><th class="r">Raised banks (ha)</th><th class="r">Change (ha)</th><th class="r">Change (%)</th>
+</tr>
+<tr>
+<td class="l" style="background:#F29798">No development zone (Red)</td>
+<td class="r">473.6</td>
+<td class="r">286.6</td>
+<td class="r">-187.1</td>
+<td class="r">-39</td>
+</tr>
+<tr>
+<td class="l" style="background:#FFC58C">Restricted development zone (Orange)</td>
+<td class="r">311.2</td>
+<td class="r">310.8</td>
+<td class="r">-0.5</td>
+<td class="r">0</td>
+</tr>
+<tr>
+<td class="l" style="background:#FFED8C">Conditional development zone (Yellow)</td>
+<td class="r">127.1</td>
+<td class="r">124.3</td>
+<td class="r">-2.8</td>
+<td class="r">-2</td>
+</tr>
+<tr>
+<td class="l" style="background:#A3D4A0">Protection zone (Green)</td>
+<td class="r">53.0</td>
+<td class="r">53.0</td>
+<td class="r">0.0</td>
+<td class="r">0</td>
+</tr>
+<tr class="b">
+<td class="l">Total flood zones (red + orange + yellow)</td>
+<td class="r">911.9</td>
+<td class="r">721.6</td>
+<td class="r">-190.3</td>
+<td class="r">-21</td>
+</tr>
+</table><p class="note">How to read: the area of each zone in the two scenarios. A negative change means the zone is smaller in &quot;Raised banks&quot; than in &quot;Current situation&quot;.</p>
+<h2>Evacuation zones</h2>
+<p class="cap">Table 3. Evacuation zones</p><table><tr>
+<th class="l">Zone</th><th class="l">Settlement type</th><th class="l">Settlements</th><th class="r">Number of settlements</th><th class="r">Zone area (ha)</th><th class="r">Area at risk (ha)</th><th class="r">At risk (%)</th><th class="l">Safe haven</th>
+</tr>
+<tr>
+<td class="l">RC-01</td>
+<td class="l">Refugee camp</td>
+<td class="l">Hope camp</td>
+<td class="r">1</td>
+<td class="r">24.3</td>
+<td class="r">23.6</td>
+<td class="r">97</td>
+<td class="l">SH-RC-01</td>
+</tr>
+<tr>
+<td class="l">T-02</td>
+<td class="l">Town</td>
+<td class="l">Riverside town</td>
+<td class="r">1</td>
+<td class="r">63.2</td>
+<td class="r">43.9</td>
+<td class="r">69</td>
+<td class="l">SH-T-02</td>
+</tr>
+<tr>
+<td class="l">V-03</td>
+<td class="l">Village</td>
+<td class="l">Kolo</td>
+<td class="r">1</td>
+<td class="r">8.0</td>
+<td class="r">8.0</td>
+<td class="r">100</td>
+<td class="l">SH-V-03</td>
+</tr>
+<tr>
+<td class="l">V-04</td>
+<td class="l">Village</td>
+<td class="l">Mabek, Mabek east</td>
+<td class="r">2</td>
+<td class="r">11.4</td>
+<td class="r">10.9</td>
+<td class="r">96</td>
+<td class="l">SH-V-04</td>
+</tr>
+<tr>
+<td class="l">V-05</td>
+<td class="l">Village</td>
+<td class="l">Tiri</td>
+<td class="r">1</td>
+<td class="r">4.3</td>
+<td class="r">4.3</td>
+<td class="r">100</td>
+<td class="l">SH-V-05</td>
+</tr>
+<tr class="b">
+<td class="l">Total</td>
+<td class="l"></td>
+<td class="l"></td>
+<td class="r">6</td>
+<td class="r">111.1</td>
+<td class="r">90.6</td>
+<td class="r">82</td>
+<td class="l"></td>
+</tr>
+</table><p class="note">How to read: each row is a group of settlements that are evacuated together. The whole zone is evacuated, even if only part of it (&quot;Area at risk&quot;) is in or near a flood zone.</p>
+<h2>Safe havens</h2>
+<p class="cap">Table 4. Safe havens</p><table><tr>
+<th class="l">Safe haven</th><th class="l">For zone</th><th class="r">Zone area (ha)</th><th class="r">Safe haven area (ha)</th><th class="r">Size compared with zone</th><th class="r">Distance to flood (m)</th><th class="r">Ground level (m)</th><th class="l">Above flood level?</th><th class="l">Nearby facility</th>
+</tr>
+<tr>
+<td class="l">SH-RC-01</td>
+<td class="l">RC-01</td>
+<td class="r">24.3</td>
+<td class="r">24.3</td>
+<td class="r">1.00</td>
+<td class="r">150</td>
+<td class="r">420.9–428.0</td>
+<td class="l">yes, checked</td>
+<td class="l"></td>
+</tr>
+<tr>
+<td class="l">SH-T-02</td>
+<td class="l">T-02</td>
+<td class="r">63.2</td>
+<td class="r">63.2</td>
+<td class="r">1.00</td>
+<td class="r">150</td>
+<td class="r">420.6–432.3</td>
+<td class="l">yes, checked</td>
+<td class="l">District health centre (inside the haven)</td>
+</tr>
+<tr>
+<td class="l">SH-V-03</td>
+<td class="l">V-03</td>
+<td class="r">8.0</td>
+<td class="r">8.0</td>
+<td class="r">1.00</td>
+<td class="r">170</td>
+<td class="r">424.6–428.4</td>
+<td class="l">yes, checked</td>
+<td class="l">South primary school (71 m)</td>
+</tr>
+<tr>
+<td class="l">SH-V-04</td>
+<td class="l">V-04</td>
+<td class="r">11.4</td>
+<td class="r">11.4</td>
+<td class="r">1.00</td>
+<td class="r">150</td>
+<td class="r">420.3–424.5</td>
+<td class="l">yes, checked</td>
+<td class="l"></td>
+</tr>
+<tr>
+<td class="l">SH-V-05</td>
+<td class="l">V-05</td>
+<td class="r">4.3</td>
+<td class="r">4.3</td>
+<td class="r">1.00</td>
+<td class="r">230</td>
+<td class="r">418.7–420.9</td>
+<td class="l">yes, checked</td>
+<td class="l"></td>
+</tr>
+</table><p class="note">How to read: each zone has one safe haven of about the same size (column &quot;Size compared with zone&quot;: 1.00 = the same area). &quot;Distance to flood&quot; is the shortest distance from the haven to ground flooded in the design event.</p>
+<h2>Evacuation routes</h2>
+<p class="cap">Table 5. Evacuation routes by zone (summary)</p><table><tr>
+<th class="l">Zone</th><th class="l">Settlement type</th><th class="l">Safe haven</th><th class="r">Number of routes</th><th class="r">Shortest (km)</th><th class="r">Longest (km)</th><th class="r">Longest walking time (min)</th><th class="r">Through flood water (m)</th>
+</tr>
+<tr>
+<td class="l">RC-01</td>
+<td class="l">Refugee camp</td>
+<td class="l">SH-RC-01</td>
+<td class="r">1</td>
+<td class="r">0.51</td>
+<td class="r">0.51</td>
+<td class="r">10</td>
+<td class="r">181</td>
+</tr>
+<tr>
+<td class="l">T-02</td>
+<td class="l">Town</td>
+<td class="l">SH-T-02</td>
+<td class="r">1</td>
+<td class="r">0.66</td>
+<td class="r">0.66</td>
+<td class="r">13</td>
+<td class="r">28</td>
+</tr>
+<tr>
+<td class="l">V-03</td>
+<td class="l">Village</td>
+<td class="l">SH-V-03</td>
+<td class="r">1</td>
+<td class="r">0.90</td>
+<td class="r">0.90</td>
+<td class="r">18</td>
+<td class="r">225</td>
+</tr>
+<tr>
+<td class="l">V-04</td>
+<td class="l">Village</td>
+<td class="l">SH-V-04</td>
+<td class="r">2</td>
+<td class="r">0.41</td>
+<td class="r">0.45</td>
+<td class="r">9</td>
+<td class="r">80</td>
+</tr>
+<tr>
+<td class="l">V-05</td>
+<td class="l">Village</td>
+<td class="l">SH-V-05</td>
+<td class="r">1</td>
+<td class="r">0.83</td>
+<td class="r">0.83</td>
+<td class="r">17</td>
+<td class="r">424</td>
+</tr>
+</table><p class="note">How to read: one row per evacuation zone. Large zones are split into sectors, each with its own route to the same safe haven.</p>
+<p class="cap">Table 6. Evacuation routes (detail)</p><table><tr>
+<th class="l">Route</th><th class="l">From</th><th class="l">To safe haven</th><th class="r">Length (km)</th><th class="r">Walking time (min)</th><th class="r">On roads (%)</th><th class="r">On paths (%)</th><th class="r">Open ground (%)</th><th class="r">Through flood water (m)</th>
+</tr>
+<tr>
+<td class="l">RC-01-R1</td>
+<td class="l">RC-01, sector 1</td>
+<td class="l">SH-RC-01</td>
+<td class="r">0.51</td>
+<td class="r">10</td>
+<td class="r">24</td>
+<td class="r">0</td>
+<td class="r">76</td>
+<td class="r">181</td>
+</tr>
+<tr>
+<td class="l">T-02-R1</td>
+<td class="l">T-02, sector 1</td>
+<td class="l">SH-T-02</td>
+<td class="r">0.66</td>
+<td class="r">13</td>
+<td class="r">0</td>
+<td class="r">0</td>
+<td class="r">100</td>
+<td class="r">28</td>
+</tr>
+<tr>
+<td class="l">V-03-R1</td>
+<td class="l">V-03, sector 1</td>
+<td class="l">SH-V-03</td>
+<td class="r">0.90</td>
+<td class="r">18</td>
+<td class="r">16</td>
+<td class="r">0</td>
+<td class="r">84</td>
+<td class="r">225</td>
+</tr>
+<tr>
+<td class="l">V-04-R1</td>
+<td class="l">V-04, sector 1</td>
+<td class="l">SH-V-04</td>
+<td class="r">0.41</td>
+<td class="r">8</td>
+<td class="r">0</td>
+<td class="r">39</td>
+<td class="r">61</td>
+<td class="r">0</td>
+</tr>
+<tr>
+<td class="l">V-04-R2</td>
+<td class="l">V-04, sector 2</td>
+<td class="l">SH-V-04</td>
+<td class="r">0.45</td>
+<td class="r">9</td>
+<td class="r">71</td>
+<td class="r">0</td>
+<td class="r">29</td>
+<td class="r">80</td>
+</tr>
+<tr>
+<td class="l">V-05-R1</td>
+<td class="l">V-05, sector 1</td>
+<td class="l">SH-V-05</td>
+<td class="r">0.83</td>
+<td class="r">17</td>
+<td class="r">95</td>
+<td class="r">0</td>
+<td class="r">5</td>
+<td class="r">424</td>
+</tr>
+</table><p class="note">How to read: each route starts at the road point nearest to the middle of its sector and ends at the safe haven. The three % columns show how much of the route is on roads and tracks, on footpaths and across open ground; together they make 100%.</p>
+<h2>Terms used</h2>
+<ul><li>Design event: the largest flood used for planning (e.g. the 100-year flood). Shallow water below the minimum depth is ignored.</li><li>Evacuation zone: one or more settlements of the same type, close to each other, that are evacuated together. Codes are made of the type initials and a number.</li><li>Safe haven: dry, open ground outside the flood zones where people gather and stay during a flood. &quot;Above flood level?&quot; says whether the ground was checked against the nearby flood water level with a terrain model (DEM).</li><li>Evacuation route: the easiest walking route from the sector to the safe haven. Roads are preferred, then footpaths, then open ground; deep water and steep slopes are avoided and the river is crossed only on roads.</li><li>Walking time: at about 3.1 km/h, the pace of people walking with children and belongings.</li><li>Through flood water: length of the route where the design flood is deep enough to be unsafe (0.3 m or more by default). It is usually unavoidable for settlements inside the floodplain, so these places must be evacuated early, before the water rises.</li></ul>
+</body></html>
