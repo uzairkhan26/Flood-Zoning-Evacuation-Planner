@@ -16,12 +16,13 @@ except ImportError:  # pragma: no cover
     HAS_QGIS = False
 
 _APP = None
+_PROVIDER = None  # keep a Python reference, otherwise createInstance() overrides are lost
 
 
 @pytest.fixture(scope='session')
 def qgis_processing():
     """Start a headless QGIS with Processing and this plugin's provider."""
-    global _APP
+    global _APP, _PROVIDER
     if not HAS_QGIS:
         pytest.skip('QGIS is not available')
     os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
@@ -35,7 +36,8 @@ def qgis_processing():
         from processing.core.Processing import Processing
         Processing.initialize()
         from flood_zoning_evacuation_planner.provider import FloodZoningProvider
-        QgsApplication.processingRegistry().addProvider(FloodZoningProvider())
+        _PROVIDER = FloodZoningProvider()
+        QgsApplication.processingRegistry().addProvider(_PROVIDER)
     import processing
     return processing
 
